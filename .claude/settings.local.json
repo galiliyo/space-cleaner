@@ -8,7 +8,13 @@
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth:*)",
       "Bash(gh repo:*)",
       "Bash(cmd.exe:*)",
-      "Bash(where.exe gh:*)"
+      "Bash(where.exe gh:*)",
+      "Bash(export:*)",
+      "mcp__mcp-unity__create_scene",
+      "WebSearch",
+      "mcp__mcp-unity__recompile_scripts",
+      "Bash(curl:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
