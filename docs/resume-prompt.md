@@ -19,8 +19,16 @@ I'm resuming work on Space Cleaner. Here's where I left off:
 - No custom tags/layers defined
 - No scenes created beyond the template SampleScene
 
+**Pending downloads (do before or during M1):**
+- [ ] Kenney Space Kit — ships/structures (kenney.nl/assets/space-kit)
+- [ ] Kenney Sci-Fi Sounds + Impact Sounds — gameplay audio
+- [ ] OpenGameArt Low Poly Space Pack — planets/asteroids
+- [ ] FREE Skybox Extended Shader — from Unity Asset Store
+- [ ] Kenney Digital Audio — UI sounds
+See `docs/plans/asset-sourcing-strategy.md` for full list and links.
+
 **Next logical steps (pick one or more):**
-1. Download and import priority placeholder assets (Kenney Space Kit, Sci-Fi Sounds, etc.) per `docs/plans/asset-sourcing-strategy.md`
+1. Download and import priority placeholder assets (above checklist)
 2. Start M1 prototype — check `docs/tasks/M1-prototype.md` for the task checklist
 3. Set up tags/layers (Player, Enemy, Trash, Projectile, etc.)
 4. Create the Gameplay scene and basic player ship with movement

@@ -9,8 +9,8 @@ namespace SpaceCleaner.Player
         [SerializeField] private float orbitRadius = 52f; // planet radius + hover height
 
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 30f;
-        [SerializeField] private float rotationSmoothSpeed = 10f;
+        [SerializeField] private float moveSpeed = 60f;
+        [SerializeField] private float rotationSmoothSpeed = 25f;
 
         private Vector2 moveInput;
         private Vector3 velocity;
@@ -22,6 +22,8 @@ namespace SpaceCleaner.Player
         {
             planet = planetTransform;
             orbitRadius = radius;
+            loggedNoPlanet = false;
+            Debug.Log($"[SphericalMovement] Planet set: {planetTransform?.name}, orbitRadius={radius}");
             SnapToSurface();
         }
 
@@ -30,9 +32,19 @@ namespace SpaceCleaner.Player
             moveInput = input;
         }
 
+        private bool loggedNoPlanet;
+
         private void Update()
         {
-            if (planet == null) return;
+            if (planet == null)
+            {
+                if (!loggedNoPlanet)
+                {
+                    Debug.LogWarning("[SphericalMovement] Planet reference is null — waiting for LevelSetup to assign it.");
+                    loggedNoPlanet = true;
+                }
+                return;
+            }
             if (moveInput.sqrMagnitude < 0.01f) return;
 
             // Get local "right" and "forward" directions relative to sphere surface
@@ -75,13 +87,6 @@ namespace SpaceCleaner.Player
             if (planet == null) return;
             Vector3 dir = (transform.position - planet.position).normalized;
             transform.position = planet.position + dir * orbitRadius;
-
-            // Align up to surface normal
-            Vector3 up = dir;
-            Vector3 forward = Vector3.ProjectOnPlane(transform.forward, up).normalized;
-            if (forward.sqrMagnitude < 0.001f)
-                forward = Vector3.ProjectOnPlane(Vector3.forward, up).normalized;
-            transform.rotation = Quaternion.LookRotation(forward, up);
         }
     }
 }

@@ -8,23 +8,20 @@ namespace SpaceCleaner.Core
         public bool IsBeingCollected { get; private set; }
 
         private Transform target;
-        private float lerpSpeed;
-        private float collectProgress;
+        private float moveSpeed;
 
         public void StartCollection(Transform collector, float speed)
         {
             IsBeingCollected = true;
             target = collector;
-            lerpSpeed = speed;
-            collectProgress = 0f;
+            moveSpeed = speed;
         }
 
         private void Update()
         {
             if (!IsBeingCollected || target == null) return;
 
-            collectProgress += lerpSpeed * Time.deltaTime;
-            transform.position = Vector3.Lerp(transform.position, target.position, collectProgress * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, target.position, moveSpeed * Time.deltaTime);
 
             if (Vector3.Distance(transform.position, target.position) < 0.5f)
             {

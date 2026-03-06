@@ -22,24 +22,6 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
-                },
-                {
-                    "name": "SingleShot",
-                    "type": "Button",
-                    "id": "a1b2c3d4-0001-0001-0001-000000000030",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
-                    "name": "BurstShot",
-                    "type": "Button",
-                    "id": "a1b2c3d4-0001-0001-0001-000000000040",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "Hold(duration=0.3)",
-                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -121,59 +103,59 @@
                     "isPartOfComposite": false
                 },
                 {
-                    "name": "",
-                    "id": "b1b2c3d4-0001-0001-0001-000000000011",
-                    "path": "<Mouse>/position",
+                    "name": "ArrowKeys",
+                    "id": "b1b2c3d4-0001-0001-0001-000000000050",
+                    "path": "2DVector",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Aim",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "up",
+                    "id": "b1b2c3d4-0001-0001-0001-000000000051",
+                    "path": "<Keyboard>/upArrow",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard",
                     "action": "Aim",
                     "isComposite": false,
-                    "isPartOfComposite": false
+                    "isPartOfComposite": true
                 },
                 {
-                    "name": "",
-                    "id": "b1b2c3d4-0001-0001-0001-000000000020",
-                    "path": "<Mouse>/leftButton",
+                    "name": "down",
+                    "id": "b1b2c3d4-0001-0001-0001-000000000052",
+                    "path": "<Keyboard>/downArrow",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard",
-                    "action": "SingleShot",
+                    "action": "Aim",
                     "isComposite": false,
-                    "isPartOfComposite": false
+                    "isPartOfComposite": true
                 },
                 {
-                    "name": "",
-                    "id": "b1b2c3d4-0001-0001-0001-000000000021",
-                    "path": "<Gamepad>/rightTrigger",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Gamepad",
-                    "action": "SingleShot",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "b1b2c3d4-0001-0001-0001-000000000030",
-                    "path": "<Mouse>/rightButton",
+                    "name": "left",
+                    "id": "b1b2c3d4-0001-0001-0001-000000000053",
+                    "path": "<Keyboard>/leftArrow",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard",
-                    "action": "BurstShot",
+                    "action": "Aim",
                     "isComposite": false,
-                    "isPartOfComposite": false
+                    "isPartOfComposite": true
                 },
                 {
-                    "name": "",
-                    "id": "b1b2c3d4-0001-0001-0001-000000000031",
-                    "path": "<Gamepad>/leftTrigger",
+                    "name": "right",
+                    "id": "b1b2c3d4-0001-0001-0001-000000000054",
+                    "path": "<Keyboard>/rightArrow",
                     "interactions": "",
                     "processors": "",
-                    "groups": "Gamepad",
-                    "action": "BurstShot",
+                    "groups": "Keyboard",
+                    "action": "Aim",
                     "isComposite": false,
-                    "isPartOfComposite": false
+                    "isPartOfComposite": true
                 }
             ]
         },

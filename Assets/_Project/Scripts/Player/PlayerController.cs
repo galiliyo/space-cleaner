@@ -18,8 +18,6 @@ namespace SpaceCleaner.Player
         private ShootingSystem shooting;
         private InputAction moveAction;
         private InputAction aimAction;
-        private InputAction singleShotAction;
-        private InputAction burstShotAction;
         private float overflowDecayTimer;
 
         public int AmmoCount => ammoCount;
@@ -32,32 +30,67 @@ namespace SpaceCleaner.Player
             movement = GetComponent<SphericalMovement>();
             shooting = GetComponent<ShootingSystem>();
 
+            if (inputActions == null)
+            {
+                // Try to find the asset at runtime (in case scene reference broke)
+                inputActions = Resources.Load<InputActionAsset>("SpaceCleaner_Actions");
+                if (inputActions == null)
+                {
+                    // Last resort: search all loaded assets
+                    var allAssets = Resources.FindObjectsOfTypeAll<InputActionAsset>();
+                    foreach (var asset in allAssets)
+                    {
+                        if (asset.name.Contains("SpaceCleaner"))
+                        {
+                            inputActions = asset;
+                            break;
+                        }
+                    }
+                }
+                if (inputActions == null)
+                {
+                    Debug.LogError("[PlayerController] InputActions asset is NULL! Reassign it in the Inspector.");
+                    return;
+                }
+                Debug.LogWarning("[PlayerController] InputActions was null — found it via fallback. Please reassign in Inspector.");
+            }
+
             var playerMap = inputActions.FindActionMap("Player");
+            if (playerMap == null)
+            {
+                Debug.LogError("[PlayerController] 'Player' action map not found in InputActions asset!");
+                return;
+            }
+
             moveAction = playerMap.FindAction("Move");
             aimAction = playerMap.FindAction("Aim");
-            singleShotAction = playerMap.FindAction("SingleShot");
-            burstShotAction = playerMap.FindAction("BurstShot");
+
+            if (moveAction == null) Debug.LogError("[PlayerController] 'Move' action not found!");
+            if (aimAction == null) Debug.LogError("[PlayerController] 'Aim' action not found!");
         }
 
         private void OnEnable()
         {
-            inputActions.Enable();
-            singleShotAction.performed += OnSingleShot;
-            burstShotAction.performed += OnBurstShot;
+            if (inputActions != null) inputActions.Enable();
         }
 
         private void OnDisable()
         {
-            singleShotAction.performed -= OnSingleShot;
-            burstShotAction.performed -= OnBurstShot;
-            inputActions.Disable();
+            if (inputActions != null) inputActions.Disable();
         }
 
         private void Update()
         {
+            if (moveAction == null || aimAction == null) return;
+
             // Feed movement input
             Vector2 moveInput = moveAction.ReadValue<Vector2>();
             movement.SetMoveInput(moveInput);
+
+            // Feed aim input to shooting system
+            Vector2 aimInput = aimAction.ReadValue<Vector2>();
+            if (shooting != null)
+                shooting.UpdateAim(aimInput);
 
             // Overflow decay
             if (ammoCount > softCap)
@@ -84,18 +117,6 @@ namespace SpaceCleaner.Player
             ammoCount -= amount;
             OnAmmoChanged?.Invoke(ammoCount);
             return true;
-        }
-
-        private void OnSingleShot(InputAction.CallbackContext ctx)
-        {
-            if (shooting != null)
-                shooting.FireSingle();
-        }
-
-        private void OnBurstShot(InputAction.CallbackContext ctx)
-        {
-            if (shooting != null)
-                shooting.FireBurst();
         }
     }
 }

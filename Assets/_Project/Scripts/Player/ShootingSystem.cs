@@ -7,26 +7,24 @@ namespace SpaceCleaner.Player
         [Header("Projectile")]
         [SerializeField] private GameObject projectilePrefab;
         [SerializeField] private Transform firePoint;
-        [SerializeField] private float projectileSpeed = 40f;
+        [SerializeField] private float projectileSpeed = 8f;
 
-        [Header("Single Shot")]
+        [Header("Single Shot (Flick)")]
+        [SerializeField] private float flickThreshold = 0.3f;
         [SerializeField] private float singleShotCooldown = 0.3f;
 
-        [Header("Burst Shot")]
-        [SerializeField] private int burstCount = 10;
-        [SerializeField] private float burstInterval = 0.05f;
-        [SerializeField] private float burstCooldown = 3f;
+        [Header("Auto-Fire (Hold)")]
+        [SerializeField] private float autoFireRate = 6f; // shots per second
 
         private PlayerController playerController;
         private SphericalMovement sphericalMovement;
         private float singleShotTimer;
-        private float burstCooldownTimer;
-        private bool isBursting;
-        private int burstShotsFired;
-        private float burstIntervalTimer;
+        private float autoFireTimer;
+        private float aimHoldTime;
+        private bool wasAiming;
+        private Vector2 lastAimDirection;
 
-        public bool IsBursting => isBursting;
-        public float BurstCooldownNormalized => burstCooldownTimer / burstCooldown;
+        public bool IsAutoFiring => wasAiming && aimHoldTime >= flickThreshold;
 
         private void Awake()
         {
@@ -38,52 +36,75 @@ namespace SpaceCleaner.Player
         {
             if (singleShotTimer > 0f)
                 singleShotTimer -= Time.deltaTime;
-            if (burstCooldownTimer > 0f)
-                burstCooldownTimer -= Time.deltaTime;
-
-            if (isBursting)
-                UpdateBurst();
+            if (autoFireTimer > 0f)
+                autoFireTimer -= Time.deltaTime;
         }
 
-        public void FireSingle()
+        /// <summary>
+        /// Called every frame by PlayerController with the current aim stick input.
+        /// </summary>
+        public void UpdateAim(Vector2 aimInput)
         {
-            if (singleShotTimer > 0f) return;
-            if (!playerController.TryConsumeAmmo()) return;
+            bool isAiming = aimInput.sqrMagnitude > 0.01f;
 
-            SpawnProjectile();
-            singleShotTimer = singleShotCooldown;
-        }
-
-        public void FireBurst()
-        {
-            if (isBursting) return;
-            if (burstCooldownTimer > 0f) return;
-            if (playerController.AmmoCount <= 0) return;
-
-            isBursting = true;
-            burstShotsFired = 0;
-            burstIntervalTimer = 0f;
-        }
-
-        private void UpdateBurst()
-        {
-            burstIntervalTimer -= Time.deltaTime;
-            if (burstIntervalTimer > 0f) return;
-
-            if (burstShotsFired >= burstCount || !playerController.TryConsumeAmmo())
+            if (isAiming)
             {
-                isBursting = false;
-                burstCooldownTimer = burstCooldown;
-                return;
+                lastAimDirection = aimInput.normalized;
+                aimHoldTime += Time.deltaTime;
+
+                // Orient fire point toward aim direction on the sphere surface
+                UpdateFireDirection(lastAimDirection);
+
+                // Auto-fire when held long enough
+                if (aimHoldTime >= flickThreshold)
+                {
+                    if (autoFireTimer <= 0f)
+                    {
+                        FireProjectile();
+                        autoFireTimer = 1f / autoFireRate;
+                    }
+                }
+            }
+            else if (wasAiming)
+            {
+                // Just released — flick fires a single shot
+                if (aimHoldTime < flickThreshold)
+                {
+                    if (singleShotTimer <= 0f)
+                    {
+                        FireProjectile();
+                        singleShotTimer = singleShotCooldown;
+                    }
+                }
+
+                aimHoldTime = 0f;
             }
 
-            SpawnProjectile();
-            burstShotsFired++;
-            burstIntervalTimer = burstInterval;
+            wasAiming = isAiming;
         }
 
-        private void SpawnProjectile()
+        private void UpdateFireDirection(Vector2 aimDir)
         {
+            if (sphericalMovement == null || sphericalMovement.Planet == null) return;
+
+            // Get the ship's surface-relative axes
+            Vector3 up = (transform.position - sphericalMovement.Planet.position).normalized;
+            Vector3 shipForward = Vector3.ProjectOnPlane(transform.forward, up).normalized;
+            Vector3 shipRight = Vector3.Cross(up, shipForward).normalized;
+
+            // Build world aim direction from 2D stick input
+            Vector3 worldAimDir = (shipForward * aimDir.y + shipRight * aimDir.x).normalized;
+
+            // Orient the fire point
+            if (firePoint != null && worldAimDir.sqrMagnitude > 0.001f)
+            {
+                firePoint.rotation = Quaternion.LookRotation(worldAimDir, up);
+            }
+        }
+
+        private void FireProjectile()
+        {
+            if (!playerController.TryConsumeAmmo()) return;
             if (projectilePrefab == null || firePoint == null) return;
 
             GameObject proj = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);

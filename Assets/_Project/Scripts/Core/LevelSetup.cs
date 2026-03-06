@@ -2,6 +2,7 @@ using UnityEngine;
 using SpaceCleaner.Player;
 using SpaceCleaner.Camera;
 using SpaceCleaner.Enemies;
+using SpaceCleaner.UI;
 
 namespace SpaceCleaner.Core
 {
@@ -20,6 +21,7 @@ namespace SpaceCleaner.Core
         private void Start()
         {
             float orbitRadius = planetRadius + hoverHeight;
+            Debug.Log($"[LevelSetup] Starting. planet={planet?.name ?? "NULL"}, player={(player != null ? "OK" : "NULL")}, orbitRadius={orbitRadius}");
 
             // Setup player
             if (player != null)
@@ -27,6 +29,8 @@ namespace SpaceCleaner.Core
                 var movement = player.GetComponent<SphericalMovement>();
                 if (movement != null)
                     movement.SetPlanet(planet, orbitRadius);
+                else
+                    Debug.LogError("[LevelSetup] SphericalMovement not found on player!");
 
                 // Position player on top of planet
                 player.transform.position = planet.position + Vector3.up * orbitRadius;
@@ -44,7 +48,49 @@ namespace SpaceCleaner.Core
             {
                 aiOpponent.transform.position = planet.position + Vector3.down * orbitRadius;
                 aiOpponent.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.down);
+
+                // Add world-space health bar to opponent
+                if (aiOpponent.GetComponent<WorldSpaceHealthBar>() == null)
+                    aiOpponent.gameObject.AddComponent<WorldSpaceHealthBar>();
             }
+
+            // Setup radar minimap
+            SetupRadar();
+        }
+
+        private void SetupRadar()
+        {
+            if (player == null || planet == null) return;
+
+            // Find existing HUD canvas
+            var hudCanvas = FindAnyObjectByType<GameplayHUD>();
+            if (hudCanvas == null) return;
+
+            // Create radar container
+            var radarGo = new GameObject("RadarMinimap");
+            radarGo.transform.SetParent(hudCanvas.transform, false);
+
+            var radarRt = radarGo.AddComponent<RectTransform>();
+            radarRt.anchorMin = new Vector2(0, 0);
+            radarRt.anchorMax = new Vector2(0, 0);
+            radarRt.pivot = new Vector2(0, 0);
+            radarRt.anchoredPosition = new Vector2(20, 180); // above joystick area
+            radarRt.sizeDelta = new Vector2(140, 140);
+
+            // Circular background
+            var bgImage = radarGo.AddComponent<UnityEngine.UI.Image>();
+            bgImage.color = new Color(0.1f, 0.1f, 0.2f, 0.3f);
+
+            // Add mask for circular clipping
+            var mask = radarGo.AddComponent<UnityEngine.UI.Mask>();
+            mask.showMaskGraphic = true;
+
+            // Radar script
+            var radar = radarGo.AddComponent<RadarMinimap>();
+
+            // Use reflection-free approach: set via serialized fields using a helper
+            // Since we're creating at runtime, we set public-accessible references
+            radar.SetReferences(planet, player.transform, radarRt, bgImage);
         }
     }
 }

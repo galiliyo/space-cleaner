@@ -14,7 +14,15 @@
       "WebSearch",
       "mcp__mcp-unity__recompile_scripts",
       "Bash(curl:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "mcp__mcp-unity__create_material",
+      "mcp__mcp-unity__create_prefab",
+      "mcp__mcp-unity__update_gameobject",
+      "mcp__mcp-unity__get_gameobject",
+      "mcp__mcp-unity__execute_menu_item",
+      "mcp__mcp-unity__batch_execute",
+      "mcp__mcp-unity__save_scene",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

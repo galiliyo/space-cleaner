@@ -3,7 +3,6 @@ using UnityEngine.UI;
 using TMPro;
 using SpaceCleaner.Core;
 using SpaceCleaner.Player;
-using SpaceCleaner.Enemies;
 
 namespace SpaceCleaner.UI
 {
@@ -17,33 +16,19 @@ namespace SpaceCleaner.UI
         [SerializeField] private Slider cleanupBar;
         [SerializeField] private TextMeshProUGUI cleanupPercentText;
 
-        [Header("Opponent")]
-        [SerializeField] private Slider opponentHealthBar;
-        [SerializeField] private GameObject opponentHealthPanel;
-
         [Header("Level Complete")]
         [SerializeField] private GameObject levelCompletePanel;
 
         private PlayerController player;
-        private Health opponentHealth;
 
         private void Start()
         {
             if (levelCompletePanel != null)
                 levelCompletePanel.SetActive(false);
 
-            // Find references
             player = FindAnyObjectByType<PlayerController>();
             if (player != null)
                 player.OnAmmoChanged += UpdateAmmoDisplay;
-
-            var opponent = FindAnyObjectByType<AIOpponent>();
-            if (opponent != null)
-            {
-                opponentHealth = opponent.GetComponent<Health>();
-                if (opponentHealth != null)
-                    opponentHealth.OnHealthChanged += UpdateOpponentHealth;
-            }
 
             if (GameManager.Instance != null)
             {
@@ -51,7 +36,6 @@ namespace SpaceCleaner.UI
                 GameManager.Instance.OnLevelComplete += ShowLevelComplete;
             }
 
-            // Initialize displays
             UpdateAmmoDisplay(player != null ? player.AmmoCount : 0);
             UpdateCleanupDisplay(0f);
         }
@@ -74,15 +58,6 @@ namespace SpaceCleaner.UI
                 cleanupPercentText.text = $"{Mathf.RoundToInt(percentage * 100)}%";
         }
 
-        private void UpdateOpponentHealth(int current, int max)
-        {
-            if (opponentHealthBar != null)
-                opponentHealthBar.value = (float)current / max;
-
-            if (opponentHealthPanel != null && current <= 0)
-                opponentHealthPanel.SetActive(false);
-        }
-
         private void ShowLevelComplete()
         {
             if (levelCompletePanel != null)
@@ -93,9 +68,6 @@ namespace SpaceCleaner.UI
         {
             if (player != null)
                 player.OnAmmoChanged -= UpdateAmmoDisplay;
-
-            if (opponentHealth != null)
-                opponentHealth.OnHealthChanged -= UpdateOpponentHealth;
 
             if (GameManager.Instance != null)
             {
