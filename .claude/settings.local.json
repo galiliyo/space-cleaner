@@ -27,7 +27,8 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "mcp__mcp-unity__update_component",
-      "mcp__mcp-unity__set_transform"
+      "mcp__mcp-unity__set_transform",
+      "mcp__mcp-unity__assign_material"
     ]
   }
 }
