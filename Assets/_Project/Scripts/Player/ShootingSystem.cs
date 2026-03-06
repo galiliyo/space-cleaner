@@ -16,6 +16,9 @@ namespace SpaceCleaner.Player
         [Header("Auto-Fire (Hold)")]
         [SerializeField] private float autoFireRate = 6f; // shots per second
 
+        [Header("Aiming Visual")]
+        [SerializeField] private AimingCone aimingCone;
+
         private PlayerController playerController;
         private SphericalMovement sphericalMovement;
         private float singleShotTimer;
@@ -46,6 +49,13 @@ namespace SpaceCleaner.Player
         public void UpdateAim(Vector2 aimInput)
         {
             bool isAiming = aimInput.sqrMagnitude > 0.01f;
+
+            // Update aiming cone visibility
+            if (aimingCone != null)
+            {
+                Vector3 worldAim = GetWorldAimDirection(isAiming ? aimInput.normalized : Vector2.zero);
+                aimingCone.UpdateCone(worldAim, isAiming);
+            }
 
             if (isAiming)
             {
@@ -83,17 +93,27 @@ namespace SpaceCleaner.Player
             wasAiming = isAiming;
         }
 
-        private void UpdateFireDirection(Vector2 aimDir)
+        /// <summary>
+        /// Converts a 2D stick input to a world-space aim direction on the planet tangent plane.
+        /// Returns Vector3.zero if planet reference is missing.
+        /// </summary>
+        private Vector3 GetWorldAimDirection(Vector2 aimDir)
         {
-            if (sphericalMovement == null || sphericalMovement.Planet == null) return;
+            if (sphericalMovement == null || sphericalMovement.Planet == null) return Vector3.zero;
 
-            // Get the ship's surface-relative axes
             Vector3 up = (transform.position - sphericalMovement.Planet.position).normalized;
             Vector3 shipForward = Vector3.ProjectOnPlane(transform.forward, up).normalized;
             Vector3 shipRight = Vector3.Cross(up, shipForward).normalized;
 
-            // Build world aim direction from 2D stick input
-            Vector3 worldAimDir = (shipForward * aimDir.y + shipRight * aimDir.x).normalized;
+            return (shipForward * aimDir.y + shipRight * aimDir.x).normalized;
+        }
+
+        private void UpdateFireDirection(Vector2 aimDir)
+        {
+            if (sphericalMovement == null || sphericalMovement.Planet == null) return;
+
+            Vector3 up = (transform.position - sphericalMovement.Planet.position).normalized;
+            Vector3 worldAimDir = GetWorldAimDirection(aimDir);
 
             // Orient the fire point
             if (firePoint != null && worldAimDir.sqrMagnitude > 0.001f)

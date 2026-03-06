@@ -22,7 +22,12 @@
       "mcp__mcp-unity__execute_menu_item",
       "mcp__mcp-unity__batch_execute",
       "mcp__mcp-unity__save_scene",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(ls:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__mcp-unity__update_component",
+      "mcp__mcp-unity__set_transform"
     ]
   }
 }

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using SpaceCleaner.Core;
 using SpaceCleaner.Player;
@@ -17,7 +18,9 @@ namespace SpaceCleaner.Enemies
 
         [Header("Vacuum")]
         [SerializeField] private float vacuumRadius = 6f;
+        [SerializeField] private float trashSearchRadius = 1200f;
         [SerializeField] private LayerMask trashLayer;
+        [SerializeField] private int startingAmmo = 10;
 
         [Header("Combat")]
         [SerializeField] private float shootRange = 25f;
@@ -28,11 +31,14 @@ namespace SpaceCleaner.Enemies
 
         [Header("Behavior")]
         [SerializeField] private float aggressionRange = 30f;
+        [SerializeField] private float aggressionHysteresis = 5f;
 
         private Health health;
         private Transform playerTransform;
         private int collectedAmmo;
         private float shootTimer;
+        private float trashSearchTimer;
+        private Transform cachedNearestTrash;
 
         private enum AIState { Vacuum, Combat }
         private AIState currentState = AIState.Vacuum;
@@ -50,6 +56,9 @@ namespace SpaceCleaner.Enemies
             var player = FindAnyObjectByType<PlayerController>();
             if (player != null)
                 playerTransform = player.transform;
+
+            collectedAmmo = startingAmmo;
+            Debug.Log($"[AIOpponent] Initialized. planet={planet?.name ?? "NULL"}, player={(playerTransform != null ? "OK" : "NULL")}, ammo={collectedAmmo}, orbitRadius={orbitRadius}, trashLayer={trashLayer.value}");
         }
 
         private void Update()
@@ -78,14 +87,31 @@ namespace SpaceCleaner.Enemies
             if (playerTransform == null) return;
 
             float distToPlayer = Vector3.Distance(transform.position, playerTransform.position);
-            currentState = distToPlayer < aggressionRange ? AIState.Combat : AIState.Vacuum;
+
+            if (currentState == AIState.Vacuum && distToPlayer < aggressionRange)
+                currentState = AIState.Combat;
+            else if (currentState == AIState.Combat && distToPlayer > aggressionRange + aggressionHysteresis)
+                currentState = AIState.Vacuum;
         }
 
         private void UpdateVacuumBehavior()
         {
-            // Find nearest trash
-            Collider[] nearby = Physics.OverlapSphere(transform.position, vacuumRadius * 3f, trashLayer);
-            if (nearby.Length == 0) return;
+            // Throttle expensive search to every 0.5s
+            trashSearchTimer -= Time.deltaTime;
+            if (trashSearchTimer <= 0f || cachedNearestTrash == null)
+            {
+                trashSearchTimer = 0.5f;
+                cachedNearestTrash = FindNearestTrash();
+            }
+
+            if (cachedNearestTrash != null)
+                MoveToward(cachedNearestTrash.position);
+        }
+
+        private Transform FindNearestTrash()
+        {
+            Collider[] nearby = Physics.OverlapSphere(transform.position, trashSearchRadius, trashLayer);
+            if (nearby.Length == 0) return null;
 
             Transform nearest = null;
             float nearestDist = float.MaxValue;
@@ -102,8 +128,7 @@ namespace SpaceCleaner.Enemies
                 }
             }
 
-            if (nearest != null)
-                MoveToward(nearest.position);
+            return nearest;
         }
 
         private void UpdateCombatBehavior()
@@ -189,6 +214,23 @@ namespace SpaceCleaner.Enemies
                 player.AddAmmo(collectedAmmo);
 
             GameManager.Instance?.RegisterOpponentKilled();
+            StartCoroutine(DeathSequence());
+        }
+
+        private IEnumerator DeathSequence()
+        {
+            var meshRenderer = GetComponent<MeshRenderer>();
+            if (meshRenderer != null)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    meshRenderer.enabled = false;
+                    yield return new WaitForSeconds(0.1f);
+                    meshRenderer.enabled = true;
+                    yield return new WaitForSeconds(0.1f);
+                }
+            }
+
             gameObject.SetActive(false);
         }
 

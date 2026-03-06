@@ -11,18 +11,14 @@ namespace SpaceCleaner.Core
 
         [Header("Spawning")]
         [SerializeField] private GameObject[] trashPrefabs;
-        [SerializeField] private int spawnCount = 80;
+        [SerializeField] private int spawnCount = 200;
         [SerializeField] private Transform trashParent;
 
-        [Header("Spawn Region")]
-        [Tooltip("Half-angle in degrees of the spherical cap around the player where trash spawns")]
-        [SerializeField] private float spawnCapAngle = 30f;
-
         [Header("Clustering")]
-        [Tooltip("Number of cluster centers to group trash around")]
-        [SerializeField] private int clusterCount = 12;
-        [Tooltip("Half-angle in degrees of each cluster's spread")]
-        [SerializeField] private float clusterSpreadAngle = 5f;
+        [Tooltip("Number of cluster centers distributed across the entire planet surface")]
+        [SerializeField] private int clusterCount = 20;
+        [Tooltip("Half-angle in degrees of each cluster's spread (~8° ≈ 80 units arc at orbit radius)")]
+        [SerializeField] private float clusterSpreadAngle = 8f;
         [Tooltip("Max height jitter above/below spawnHeight")]
         [SerializeField] private float heightJitter = 2f;
 
@@ -52,19 +48,11 @@ namespace SpaceCleaner.Core
             activeTrashCount = spawnCount;
             GameManager.Instance?.InitializeLevel(spawnCount);
 
-            // Find the player's starting direction to center the spawn cap
-            var player = FindAnyObjectByType<SpaceCleaner.Player.PlayerController>();
-            Vector3 capCenter = Vector3.up; // default
-            if (player != null && planet != null)
-                capCenter = (player.transform.position - planet.position).normalized;
-
-            float cosCapAngle = Mathf.Cos(spawnCapAngle * Mathf.Deg2Rad);
-
-            // Generate cluster centers within the spawn cap
+            // Generate cluster centers uniformly across the entire planet surface
             Vector3[] clusterCenters = new Vector3[clusterCount];
             for (int c = 0; c < clusterCount; c++)
             {
-                clusterCenters[c] = RandomDirectionInCap(capCenter, cosCapAngle);
+                clusterCenters[c] = Random.onUnitSphere;
             }
 
             float cosClusterAngle = Mathf.Cos(clusterSpreadAngle * Mathf.Deg2Rad);

@@ -32,6 +32,11 @@ namespace SpaceCleaner.Core
                 else
                     Debug.LogError("[LevelSetup] SphericalMovement not found on player!");
 
+                // Initialize aiming cone
+                var aimingCone = player.GetComponentInChildren<AimingCone>();
+                if (aimingCone != null)
+                    aimingCone.SetPlanet(planet);
+
                 // Position player on top of planet
                 player.transform.position = planet.position + Vector3.up * orbitRadius;
                 player.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
