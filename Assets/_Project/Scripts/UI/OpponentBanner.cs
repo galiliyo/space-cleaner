@@ -10,20 +10,32 @@ namespace SpaceCleaner.UI
     {
         [Header("Layout")]
         [SerializeField] private Vector3 bannerOffset = new Vector3(4f, 6f, 0f);
-        [SerializeField] private float lineThickness = 0.12f;
+        [SerializeField] private float lineThickness = 0.04f;
 
         [Header("Visibility")]
-        [SerializeField] private float visibleRange = 80f;
+        [SerializeField] private float visibleRange = 200f;
 
         [Header("Health Bar Size")]
         [SerializeField] private float barWidth = 5f;
         [SerializeField] private float barHeight = 0.5f;
+
+        [Header("Scaling")]
+        [SerializeField] private float baseScale = 3f;
+        [SerializeField] private float scalePerDistance = 0.08f;
+        [SerializeField] private float minScale = 2f;
+        [SerializeField] private float maxScale = 10f;
+
+        [Header("Smoothing")]
+        [SerializeField] private float positionSmoothing = 8f;
+        [SerializeField] private float rotationSmoothing = 6f;
 
         private Health health;
         private Transform cam;
         private GameObject bannerCanvas;
         private Image fillImage;
         private TextMeshProUGUI nameText;
+        private Vector3 smoothedPosition;
+        private Quaternion smoothedRotation;
 
         private void Start()
         {
@@ -43,10 +55,11 @@ namespace SpaceCleaner.UI
 
         private void CreateBanner(string name)
         {
-            // World-space canvas
+            // World-space canvas — NOT parented to ship so it doesn't inherit jitter
             bannerCanvas = new GameObject("BannerCanvas");
-            bannerCanvas.transform.SetParent(transform, false);
-            bannerCanvas.transform.localPosition = Vector3.zero;
+            bannerCanvas.transform.position = transform.position;
+            smoothedPosition = transform.position;
+            smoothedRotation = Quaternion.identity;
 
             var canvas = bannerCanvas.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -95,33 +108,36 @@ namespace SpaceCleaner.UI
             panelRt.anchorMin = new Vector2(0.5f, 0.5f);
             panelRt.anchorMax = new Vector2(0.5f, 0.5f);
             panelRt.anchoredPosition = new Vector2(bannerOffset.x, bannerOffset.y);
-            panelRt.sizeDelta = new Vector2(barWidth, barHeight + 0.7f);
+            float nameRowHeight = 1.0f;
+            panelRt.sizeDelta = new Vector2(barWidth, barHeight + nameRowHeight);
 
-            // Name text
+            // Name text — top row
             var nameGo = new GameObject("NameText", typeof(RectTransform), typeof(TextMeshProUGUI));
             nameGo.transform.SetParent(panelRt, false);
 
             var nameRt = nameGo.GetComponent<RectTransform>();
-            nameRt.anchorMin = new Vector2(0f, 0.5f);
+            float nameAnchorY = barHeight / (barHeight + nameRowHeight);
+            nameRt.anchorMin = new Vector2(0f, nameAnchorY);
             nameRt.anchorMax = new Vector2(1f, 1f);
-            nameRt.offsetMin = new Vector2(0.1f, 0f);
+            nameRt.offsetMin = new Vector2(0.05f, 0f);
             nameRt.offsetMax = Vector2.zero;
 
             nameText = nameGo.GetComponent<TextMeshProUGUI>();
             nameText.text = name;
-            nameText.fontSize = 2.5f;
+            nameText.fontSize = 2f;
             nameText.color = Color.white;
-            nameText.alignment = TextAlignmentOptions.Left;
+            nameText.alignment = TextAlignmentOptions.Center;
             nameText.enableWordWrapping = false;
-            nameText.overflowMode = TextOverflowModes.Truncate;
+            nameText.overflowMode = TextOverflowModes.Overflow;
 
             // Health bar background
             var bgGo = new GameObject("HealthBarBG", typeof(RectTransform), typeof(Image));
             bgGo.transform.SetParent(panelRt, false);
 
             var bgRt = bgGo.GetComponent<RectTransform>();
+            float barAnchorY = barHeight / (barHeight + nameRowHeight);
             bgRt.anchorMin = new Vector2(0f, 0f);
-            bgRt.anchorMax = new Vector2(1f, 0.5f);
+            bgRt.anchorMax = new Vector2(1f, barAnchorY);
             bgRt.offsetMin = Vector2.zero;
             bgRt.offsetMax = Vector2.zero;
 
@@ -153,9 +169,21 @@ namespace SpaceCleaner.UI
 
             if (!visible) return;
 
-            // Billboard — face camera
-            bannerCanvas.transform.rotation = Quaternion.LookRotation(
+            // Smoothly follow the ship position (decoupled from parent)
+            smoothedPosition = Vector3.Lerp(smoothedPosition, transform.position,
+                positionSmoothing * Time.deltaTime);
+            bannerCanvas.transform.position = smoothedPosition;
+
+            // Scale up with distance so it stays readable
+            float scale = Mathf.Clamp(baseScale + dist * scalePerDistance, minScale, maxScale);
+            bannerCanvas.transform.localScale = Vector3.one * scale;
+
+            // Smoothly billboard toward camera
+            Quaternion targetRot = Quaternion.LookRotation(
                 bannerCanvas.transform.position - cam.position, cam.up);
+            smoothedRotation = Quaternion.Slerp(smoothedRotation, targetRot,
+                rotationSmoothing * Time.deltaTime);
+            bannerCanvas.transform.rotation = smoothedRotation;
         }
 
         private void OnHealthChanged(int current, int max)
@@ -176,6 +204,9 @@ namespace SpaceCleaner.UI
         {
             if (health != null)
                 health.OnHealthChanged -= OnHealthChanged;
+
+            if (bannerCanvas != null)
+                Destroy(bannerCanvas);
         }
     }
 }

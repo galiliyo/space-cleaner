@@ -1,4 +1,5 @@
 using UnityEngine;
+using SpaceCleaner.Core;
 
 namespace SpaceCleaner.Player
 {
@@ -16,6 +17,10 @@ namespace SpaceCleaner.Player
         [Header("Auto-Fire (Hold)")]
         [SerializeField] private float autoFireRate = 6f; // shots per second
 
+        [Header("Burst")]
+        [SerializeField] private int burstShotCount = 10;
+        [SerializeField] private float burstCooldown = 3f;
+
         [Header("Aiming Visual")]
         [SerializeField] private AimingCone aimingCone;
 
@@ -27,7 +32,13 @@ namespace SpaceCleaner.Player
         private bool wasAiming;
         private Vector2 lastAimDirection;
 
+        private int burstRemaining;
+        private float burstCooldownTimer;
+        private bool burstOnCooldown;
+
         public bool IsAutoFiring => wasAiming && aimHoldTime >= flickThreshold;
+        public bool BurstOnCooldown => burstOnCooldown;
+        public float BurstCooldownNormalized => burstOnCooldown ? burstCooldownTimer / burstCooldown : 0f;
 
         public void SetAimingCone(AimingCone cone) => aimingCone = cone;
 
@@ -35,6 +46,7 @@ namespace SpaceCleaner.Player
         {
             playerController = GetComponent<PlayerController>();
             sphericalMovement = GetComponent<SphericalMovement>();
+            burstRemaining = burstShotCount;
         }
 
         private void Update()
@@ -43,6 +55,16 @@ namespace SpaceCleaner.Player
                 singleShotTimer -= Time.deltaTime;
             if (autoFireTimer > 0f)
                 autoFireTimer -= Time.deltaTime;
+
+            if (burstOnCooldown)
+            {
+                burstCooldownTimer -= Time.deltaTime;
+                if (burstCooldownTimer <= 0f)
+                {
+                    burstOnCooldown = false;
+                    burstRemaining = burstShotCount;
+                }
+            }
         }
 
         /// <summary>
@@ -67,13 +89,20 @@ namespace SpaceCleaner.Player
                 // Orient fire point toward aim direction on the sphere surface
                 UpdateFireDirection(lastAimDirection);
 
-                // Auto-fire when held long enough
-                if (aimHoldTime >= flickThreshold)
+                // Auto-fire when held long enough (burst limited)
+                if (aimHoldTime >= flickThreshold && !burstOnCooldown)
                 {
-                    if (autoFireTimer <= 0f)
+                    if (autoFireTimer <= 0f && burstRemaining > 0)
                     {
                         FireProjectile();
                         autoFireTimer = 1f / autoFireRate;
+                        burstRemaining--;
+
+                        if (burstRemaining <= 0)
+                        {
+                            burstOnCooldown = true;
+                            burstCooldownTimer = burstCooldown;
+                        }
                     }
                 }
             }
@@ -90,6 +119,10 @@ namespace SpaceCleaner.Player
                 }
 
                 aimHoldTime = 0f;
+
+                // Reset burst for next hold (unless mid-cooldown, which continues)
+                if (!burstOnCooldown)
+                    burstRemaining = burstShotCount;
             }
 
             wasAiming = isAiming;
@@ -129,7 +162,10 @@ namespace SpaceCleaner.Player
             if (!playerController.TryConsumeAmmo()) return;
             if (projectilePrefab == null || firePoint == null) return;
 
-            GameObject proj = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
+            var pool = ObjectPool.GetPoolForPrefab(projectilePrefab);
+            GameObject proj = pool != null
+                ? pool.Get(firePoint.position, firePoint.rotation)
+                : Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
             var rb = proj.GetComponent<Rigidbody>();
             if (rb != null)
             {

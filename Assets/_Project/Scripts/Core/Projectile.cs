@@ -77,6 +77,19 @@ namespace SpaceCleaner.Core
         private void OnEnable()
         {
             timer = lifetime;
+
+            // Reset velocity so stale motion from a previous life doesn't carry over
+            var rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+
+            // Clear trail so old positions don't draw a streak to the new spawn point
+            var trail = GetComponent<TrailRenderer>();
+            if (trail != null)
+                trail.Clear();
         }
 
         private void Update()
@@ -84,7 +97,7 @@ namespace SpaceCleaner.Core
             timer -= Time.deltaTime;
             if (timer <= 0f)
             {
-                Destroy(gameObject); // TODO: Return to pool
+                ObjectPool.ReturnOrDestroy(gameObject);
             }
         }
 
@@ -98,7 +111,7 @@ namespace SpaceCleaner.Core
                 health.TakeDamage(damage);
             }
 
-            Destroy(gameObject); // TODO: Return to pool
+            ObjectPool.ReturnOrDestroy(gameObject);
         }
     }
 }

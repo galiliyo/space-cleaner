@@ -18,6 +18,10 @@ namespace SpaceCleaner.Core
         [SerializeField] private SphericalCamera sphericalCamera;
         [SerializeField] private AIOpponent aiOpponent;
 
+        [Header("Pooling")]
+        [SerializeField] private GameObject projectilePrefab;
+        [SerializeField] private int projectilePoolSize = 20;
+
         private void Start()
         {
             float orbitRadius = planetRadius + hoverHeight;
@@ -64,8 +68,29 @@ namespace SpaceCleaner.Core
                     aiOpponent.gameObject.AddComponent<OpponentBanner>();
             }
 
+            // Setup projectile pool
+            SetupProjectilePool();
+
+            // Setup space skybox
+            if (GetComponent<SpaceSkybox>() == null)
+                gameObject.AddComponent<SpaceSkybox>();
+
             // Setup radar minimap
             SetupRadar();
+        }
+
+        private void SetupProjectilePool()
+        {
+            if (projectilePrefab == null) return;
+            if (ObjectPool.GetPoolForPrefab(projectilePrefab) != null) return; // already exists
+
+            var poolGO = new GameObject("ProjectilePool");
+            poolGO.SetActive(false);
+            poolGO.transform.SetParent(transform);
+
+            var pool = poolGO.AddComponent<ObjectPool>();
+            pool.InitializeRuntime(projectilePrefab, projectilePoolSize, poolGO.transform);
+            poolGO.SetActive(true);
         }
 
         private void SetupRadar()

@@ -38,7 +38,18 @@ namespace SpaceCleaner.Core
             }
 
             GameManager.Instance?.RegisterTrashCollected();
-            Destroy(gameObject); // TODO: Return to pool instead
+            ObjectPool.ReturnOrDestroy(gameObject);
+        }
+
+        /// <summary>
+        /// Resets state when retrieved from the pool so the object behaves as freshly spawned.
+        /// Called automatically via OnEnable (pool sets active after positioning).
+        /// </summary>
+        private void OnEnable()
+        {
+            IsBeingCollected = false;
+            target = null;
+            moveSpeed = 0f;
         }
     }
 }

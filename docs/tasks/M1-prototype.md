@@ -2,125 +2,126 @@
 
 **Goal:** Core gameplay loop playable — spherical ship flight, vacuum mechanic, trash spawning, dual shooting (single + burst), AI opponent, 1 test planet.
 
-**Status:** Not Started
+**Status:** In Progress (~98%)
 
 ---
 
 ## Project Setup
 
-- [ ] Install TextMeshPro package
-- [ ] Install Cinemachine package
+- [x] Install TextMeshPro package (included in com.unity.ugui 2.0.0)
+- [x] Install Cinemachine package (added 3.1.3)
 - [ ] Install DOTween (via OpenUPM or .unitypackage)
-- [ ] Update application bundle ID from template default
-- [ ] Define custom layers (Player, Enemy, Trash, Projectile)
-- [ ] Define custom tags as needed
-- [ ] Create Gameplay scene in `Assets/_Project/Scenes/Gameplay/`
+- [x] Update application bundle ID from template default (com.spacecleaner.game)
+- [x] Define custom layers (Player=6, Enemy=7, Trash=8, Projectile=9, Planet=10)
+- [x] Define custom tags (Trash, PlayerShip, EnemyShip, Planet, Projectile)
+- [x] Create Gameplay scene in `Assets/_Project/Scenes/Gameplay/`
 
 > GDD Ref: §10.1 Technology Stack
 
 ## Input System
 
-- [ ] Replace template InputActions with game-specific actions
-- [ ] Define Move action (Vector2, left joystick)
-- [ ] Define SingleShot action (drag to aim, release to fire)
-- [ ] Define BurstShot action (drag to aim, hold to auto-fire)
-- [ ] Configure Touch control scheme for mobile
-- [ ] Add Gamepad control scheme for testing
+- [x] Replace template InputActions with game-specific actions (SpaceCleaner_Actions.inputactions)
+- [x] Define Move action (Vector2, left joystick)
+- [x] Define Aim action (Vector2, right joystick — drag to aim)
+- [ ] Define separate BurstShot action (currently single unified aim/shoot)
+- [x] Configure Touch control scheme for mobile
+- [x] Add Gamepad control scheme for testing
 
 > GDD Ref: §2.1 Player Controls
 
 ## Spherical Movement System
 
-- [ ] Create PlayerShip prefab with placeholder model
-- [ ] Implement spherical surface movement (fixed radius from planet center)
-- [ ] Implement input mapping on curved surface (joystick → spherical movement)
-- [ ] Implement ship rotation to face movement direction on sphere
-- [ ] Add configurable speed parameters (SerializeField)
-- [ ] Handle wrap-around (no edges, no boundaries)
+- [x] Create PlayerShip prefab with placeholder model
+- [x] Implement spherical surface movement (fixed radius from planet center) — SphericalMovement.cs
+- [x] Implement input mapping on curved surface (joystick → spherical movement)
+- [x] Implement ship rotation to face movement direction on sphere
+- [x] Add configurable speed parameters (SerializeField)
+- [x] Handle wrap-around (no edges, no boundaries)
 
 > GDD Ref: §2.1 Player Controls, §2.2 Movement Model
 
 ## Camera System
 
-- [ ] Set up follow camera at 60-70 degree angle
-- [ ] Camera follows behind/above ship on spherical surface
-- [ ] Smooth camera transitions
-- [ ] Set up Cinemachine or manual follow camera
+- [x] Set up follow camera at 60-70 degree angle — SphericalCamera.cs
+- [x] Camera follows behind/above ship on spherical surface
+- [x] Smooth camera transitions
+- [ ] Set up Cinemachine or manual follow camera (using manual follow for now)
 
 > GDD Ref: §2.2 Movement Model, §10.2 Key Systems
 
 ## Vacuum Collection System
 
-- [ ] Add sphere trigger collider to ship for collection radius
-- [ ] Implement OnTriggerEnter to detect trash objects
-- [ ] Implement trash lerp-toward-ship animation on collect
+- [x] Add sphere trigger collider to ship for collection radius — VacuumCollector.cs
+- [x] Implement OnTriggerStay to detect trash objects
+- [x] Implement trash lerp-toward-ship animation on collect — TrashPickup.cs
 - [ ] Add vacuum sound effect trigger
-- [ ] Add vacuum particle effect
-- [ ] Implement ammo pool with soft cap (placeholder: 50)
-- [ ] Implement overflow decay when above soft cap
+- [x] Add vacuum particle effect — VacuumCollector creates inward-flowing sparkles
+- [x] Implement ammo pool with soft cap (50) — PlayerController.cs
+- [x] Implement overflow decay when above soft cap
 - [ ] Visual glow effect for collection radius
 
 > GDD Ref: §2.4 Collection and Ammo, §10.2 Key Systems
 
 ## Trash Spawning
 
-- [ ] Create base Trash prefab with Rigidbody and collider
-- [ ] Create 3-5 visual variants (placeholder meshes/colors)
-- [ ] Implement TrashSpawner that distributes trash on spherical surface around a planet
-- [ ] Implement object pooling for trash objects
-- [ ] Configure spawn parameters per planet (count, spread radius)
+- [x] Create base Trash prefab with Rigidbody and collider (Trash_A/B/C)
+- [x] Create 3 visual variants (Trash_A, Trash_B, Trash_C)
+- [x] Implement TrashSpawner that distributes trash on spherical surface around a planet
+- [x] Implement object pooling for trash objects — TrashSpawner creates pools per variant
+- [x] Configure spawn parameters per planet (count=200, clusters=25)
 
 > GDD Ref: §2.3 Trash System, §10.2 Key Systems
 
 ## Shooting System
 
-- [ ] Implement aiming cone visual (Brawl Stars-style) for both buttons
-- [ ] Implement single shot: drag to aim, release to fire, short cooldown
-- [ ] Implement burst shot: drag to aim, hold to auto-fire ~10 shots, ~3 sec cooldown with power-up animation
-- [ ] Decrement ammo pool on fire
-- [ ] Prevent firing when ammo is zero
-- [ ] Create projectile prefab with travel speed and collision
-- [ ] Implement projectile damage on hit (1 HP)
-- [ ] Object pooling for projectiles
+- [x] Implement aiming cone visual (Brawl Stars-style) — AimingCone.cs
+- [x] Implement single shot: drag to aim, release to fire (flick), short cooldown
+- [x] Implement auto-fire: hold to auto-fire (~6 shots/sec)
+- [x] Implement burst shot: hold auto-fires 10 shots then 3s cooldown — ShootingSystem.cs
+- [x] Decrement ammo pool on fire — PlayerController.TryConsumeAmmo()
+- [x] Prevent firing when ammo is zero
+- [x] Create projectile prefab with travel speed and collision — Projectile.cs
+- [x] Implement projectile damage on hit (1 HP) — Health.cs
+- [x] Object pooling for projectiles — LevelSetup creates pool, ShootingSystem/AIOpponent use it
 
 > GDD Ref: §2.7 Shooting System, §10.2 Key Systems
 
 ## AI Opponent (Basic)
 
-- [ ] Create AI opponent ship prefab with placeholder model
-- [ ] Implement basic vacuum behavior (move toward nearest trash)
-- [ ] Implement basic combat behavior (shoot at player)
-- [ ] AI opponent has one life (dies permanently)
-- [ ] On kill: transfer AI's collected trash to player's ammo pool
-- [ ] Store defeated opponent's vacuum count for carry-over system
+- [x] Create AI opponent ship prefab with placeholder model — AIShip prefab
+- [x] Implement basic vacuum behavior (move toward nearest trash) — AIOpponent.cs
+- [x] Implement basic combat behavior (shoot at player when in range)
+- [x] AI opponent has one life (dies permanently) — Health + DeathSequence
+- [x] On kill: transfer AI's collected trash to player's ammo pool
+- [x] Store defeated opponent's vacuum count for carry-over system
 
 > GDD Ref: §4.1 AI Opponents, §3.3 Score Carry-Over System
 
 ## Test Planet
 
-- [ ] Create placeholder planet (sphere with simple material)
-- [ ] Position planet in scene with trash spawned on spherical surface
-- [ ] Implement space skybox / background
+- [x] Create placeholder planet (sphere with simple material) — Planet prefab
+- [x] Position planet in scene with trash spawned on spherical surface
+- [x] Implement space skybox / background — SpaceSkybox.cs procedural 6-sided star field
 
 > GDD Ref: §3.1 Solar System Structure
 
 ## HUD (Minimal)
 
-- [ ] Ammo counter display (top-right) with soft cap indicator
-- [ ] Cleanup progress bar (top-center, 0%→100%)
-- [ ] Movement joystick (bottom-left, on-screen)
-- [ ] Single shot button (bottom-right, with aiming cone)
-- [ ] Burst shot button (bottom-right, with aiming cone and cooldown indicator)
-- [ ] Opponent health bar
+- [x] Ammo counter display with soft cap indicator — GameplayHUD.cs
+- [x] Cleanup progress bar (0%→100%)
+- [x] Movement joystick (bottom-left) — VirtualJoystick.cs
+- [x] Aiming/shooting via right stick (with aiming cone)
+- [x] Burst cooldown indicator (radial fill, bottom-right) — GameplayHUD.cs
+- [x] Opponent health bar — OpponentBanner.cs
 
 > GDD Ref: §6.1 In-Game HUD
 
 ## Level Completion
 
-- [ ] Track total trash per planet and collected count (both players combined)
-- [ ] Update cleanup percentage bar in real-time
-- [ ] Track opponent alive/dead state
-- [ ] Detect level complete: 100% cleanup AND opponent dead
-- [ ] Placeholder citizen celebration trigger at completion
+- [x] Track total trash per planet and collected count — GameManager.cs
+- [x] Update cleanup percentage bar in real-time — OnCleanupChanged event
+- [x] Track opponent alive/dead state — OnOpponentStateChanged event
+- [x] Detect level complete: 100% cleanup AND opponent dead — IsLevelComplete
+- [x] Placeholder citizen celebration — confetti particles + animated panel with "PLANET CLEANED!"
 
 > GDD Ref: §3.2 Level Completion, §3.5 Planet Cleaning

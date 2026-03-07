@@ -63,13 +63,15 @@ namespace SpaceCleaner.UI
         private void Start()
         {
             handleRect = GetComponent<RectTransform>();
-            startPos = handleRect.anchoredPosition;
 
             parentCanvas = GetComponentInParent<Canvas>();
             if (parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
                 canvasCamera = parentCanvas.worldCamera;
 
             EnsureVisuals();
+
+            // Capture start position AFTER visuals are set up and layout is stable
+            startPos = handleRect.anchoredPosition;
         }
 
         /// <summary>
@@ -215,7 +217,10 @@ namespace SpaceCleaner.UI
         /// <returns>The created FireButton component.</returns>
         public static FireButton Create(RectTransform parent, string controlPath, Vector2 anchorPosition)
         {
+            // Create INACTIVE so OnEnable (which registers the virtual device) doesn't fire
+            // before m_ControlPath is set
             var go = new GameObject("AimFireButton", typeof(RectTransform));
+            go.SetActive(false);
             go.transform.SetParent(parent, false);
 
             var rt = go.GetComponent<RectTransform>();
@@ -223,10 +228,14 @@ namespace SpaceCleaner.UI
             rt.anchorMax = new Vector2(1f, 0f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = anchorPosition;
+            rt.sizeDelta = new Vector2(44f, 44f); // handle size set before visuals
 
             var fireButton = go.AddComponent<FireButton>();
             fireButton.m_ControlPath = controlPath;
             fireButton.movementRange = 60f;
+
+            // Now activate — OnEnable will find the control path and register the virtual device
+            go.SetActive(true);
 
             fireButton.EnsureVisuals();
 

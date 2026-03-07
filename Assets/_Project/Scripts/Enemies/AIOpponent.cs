@@ -100,11 +100,26 @@ namespace SpaceCleaner.Enemies
 
         private void UpdateVacuumBehavior()
         {
-            // Throttle expensive search to every 0.5s
-            trashSearchTimer -= Time.deltaTime;
-            if (trashSearchTimer <= 0f || cachedNearestTrash == null)
+            // Only re-evaluate target when current one is invalid, inactive (pooled), or reached
+            bool needNewTarget = cachedNearestTrash == null
+                                 || !cachedNearestTrash.gameObject.activeInHierarchy;
+
+            if (!needNewTarget)
             {
-                trashSearchTimer = 0.5f;
+                var trash = cachedNearestTrash.GetComponent<TrashPickup>();
+                if (trash != null && trash.IsBeingCollected)
+                    needNewTarget = true;
+            }
+
+            if (!needNewTarget)
+            {
+                float distToTarget = Vector3.Distance(transform.position, cachedNearestTrash.position);
+                if (distToTarget < vacuumRadius)
+                    needNewTarget = true;
+            }
+
+            if (needNewTarget)
+            {
                 cachedNearestTrash = FindNearestTrash();
             }
 
@@ -184,7 +199,11 @@ namespace SpaceCleaner.Enemies
             shootTimer = shootCooldown;
 
             Vector3 dir = (playerTransform.position - firePoint.position).normalized;
-            GameObject proj = Instantiate(projectilePrefab, firePoint.position, Quaternion.LookRotation(dir));
+            Quaternion rot = Quaternion.LookRotation(dir);
+            var pool = ObjectPool.GetPoolForPrefab(projectilePrefab);
+            GameObject proj = pool != null
+                ? pool.Get(firePoint.position, rot)
+                : Instantiate(projectilePrefab, firePoint.position, rot);
             var rb = proj.GetComponent<Rigidbody>();
             if (rb != null)
                 rb.linearVelocity = dir * projectileSpeed;
@@ -204,7 +223,7 @@ namespace SpaceCleaner.Enemies
             var trash = other.GetComponent<TrashPickup>();
             if (trash != null && !trash.IsBeingCollected)
             {
-                Destroy(other.gameObject);
+                ObjectPool.ReturnOrDestroy(other.gameObject);
                 collectedAmmo++;
                 GameManager.Instance?.RegisterTrashCollected();
             }

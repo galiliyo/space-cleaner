@@ -37,6 +37,8 @@ namespace SpaceCleaner.UI
 
         private PlayerController player;
         private Health playerHealth;
+        private ShootingSystem shootingSystem;
+        private Image burstCooldownImage;
 
         private void Start()
         {
@@ -63,6 +65,7 @@ namespace SpaceCleaner.UI
                 opponentDefeatedPanel.SetActive(false);
 
             player = FindAnyObjectByType<PlayerController>();
+            shootingSystem = player != null ? player.GetComponent<ShootingSystem>() : null;
             if (player != null)
             {
                 player.OnAmmoChanged += UpdateAmmoDisplay;
@@ -99,6 +102,26 @@ namespace SpaceCleaner.UI
             if (autoCreateTouchControls && ShouldShowTouchControls())
             {
                 SetupTouchControls();
+            }
+
+            // Create burst cooldown indicator
+            CreateBurstCooldownIndicator();
+        }
+
+        private void Update()
+        {
+            // Update burst cooldown indicator
+            if (burstCooldownImage != null && shootingSystem != null)
+            {
+                if (shootingSystem.BurstOnCooldown)
+                {
+                    burstCooldownImage.enabled = true;
+                    burstCooldownImage.fillAmount = shootingSystem.BurstCooldownNormalized;
+                }
+                else
+                {
+                    burstCooldownImage.enabled = false;
+                }
             }
         }
 
@@ -177,8 +200,218 @@ namespace SpaceCleaner.UI
 
         private void ShowLevelComplete()
         {
-            if (levelCompletePanel != null)
-                levelCompletePanel.SetActive(true);
+            StartCoroutine(LevelCompleteCelebration());
+        }
+
+        private IEnumerator LevelCompleteCelebration()
+        {
+            // 1. Spawn confetti particle effect
+            SpawnConfettiEffect();
+
+            // 2. Create or show the level complete panel with animated text
+            if (levelCompletePanel == null)
+                CreateLevelCompletePanel();
+
+            // Grab references to the text elements before showing
+            var mainText = levelCompletePanel.transform.Find("MainText")?.GetComponent<TextMeshProUGUI>();
+            var subText = levelCompletePanel.transform.Find("SubText")?.GetComponent<TextMeshProUGUI>();
+            var continueText = levelCompletePanel.transform.Find("ContinueText")?.GetComponent<TextMeshProUGUI>();
+
+            // Hide sub-elements initially
+            if (subText != null) subText.gameObject.SetActive(false);
+            if (continueText != null) continueText.gameObject.SetActive(false);
+
+            levelCompletePanel.SetActive(true);
+
+            // Animate panel scale from 0 to 1 with ease-out bounce
+            var panelRT = levelCompletePanel.GetComponent<RectTransform>();
+            float duration = 0.5f;
+            float elapsed = 0f;
+            panelRT.localScale = Vector3.zero;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                // Ease-out back for a bouncy pop-in
+                float scale = 1f + 0.15f * Mathf.Sin(t * Mathf.PI);
+                if (t >= 1f) scale = 1f;
+                panelRT.localScale = Vector3.one * scale;
+                yield return null;
+            }
+            panelRT.localScale = Vector3.one;
+
+            // 3. Show sub-text after a short delay
+            yield return new WaitForSeconds(0.5f);
+            if (subText != null) subText.gameObject.SetActive(true);
+
+            // 4. After 2 seconds, show continue text
+            yield return new WaitForSeconds(2f);
+            if (continueText != null) continueText.gameObject.SetActive(true);
+        }
+
+        private void CreateLevelCompletePanel()
+        {
+            var canvasRT = GetComponentInParent<Canvas>()?.GetComponent<RectTransform>();
+            if (canvasRT == null) return;
+
+            var parentRT = GetComponent<RectTransform>() ?? canvasRT;
+
+            levelCompletePanel = new GameObject("LevelCompletePanel");
+            var panelRT = levelCompletePanel.AddComponent<RectTransform>();
+            panelRT.SetParent(parentRT, false);
+            panelRT.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRT.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRT.pivot = new Vector2(0.5f, 0.5f);
+            panelRT.anchoredPosition = Vector2.zero;
+            panelRT.sizeDelta = new Vector2(500f, 200f);
+
+            var bg = levelCompletePanel.AddComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.75f);
+
+            // Main text: "PLANET CLEANED!"
+            var mainTextGO = new GameObject("MainText");
+            var mainTextRT = mainTextGO.AddComponent<RectTransform>();
+            mainTextRT.SetParent(panelRT, false);
+            mainTextRT.anchorMin = new Vector2(0f, 0.5f);
+            mainTextRT.anchorMax = new Vector2(1f, 1f);
+            mainTextRT.sizeDelta = Vector2.zero;
+            mainTextRT.anchoredPosition = new Vector2(0f, 10f);
+
+            var mainTMP = mainTextGO.AddComponent<TextMeshProUGUI>();
+            mainTMP.text = "PLANET CLEANED!";
+            mainTMP.fontSize = 36f;
+            mainTMP.color = new Color(0.3f, 1f, 0.3f, 1f);
+            mainTMP.alignment = TextAlignmentOptions.Center;
+            mainTMP.fontStyle = FontStyles.Bold;
+
+            // Sub-text: "Citizens celebrate!"
+            var subTextGO = new GameObject("SubText");
+            var subTextRT = subTextGO.AddComponent<RectTransform>();
+            subTextRT.SetParent(panelRT, false);
+            subTextRT.anchorMin = new Vector2(0f, 0.25f);
+            subTextRT.anchorMax = new Vector2(1f, 0.55f);
+            subTextRT.sizeDelta = Vector2.zero;
+            subTextRT.anchoredPosition = Vector2.zero;
+
+            var subTMP = subTextGO.AddComponent<TextMeshProUGUI>();
+            subTMP.text = "Citizens celebrate!";
+            subTMP.fontSize = 22f;
+            subTMP.color = new Color(1f, 0.95f, 0.6f, 1f);
+            subTMP.alignment = TextAlignmentOptions.Center;
+
+            // Continue text: "Next Planet >>"
+            var continueTextGO = new GameObject("ContinueText");
+            var continueTextRT = continueTextGO.AddComponent<RectTransform>();
+            continueTextRT.SetParent(panelRT, false);
+            continueTextRT.anchorMin = new Vector2(0f, 0f);
+            continueTextRT.anchorMax = new Vector2(1f, 0.3f);
+            continueTextRT.sizeDelta = Vector2.zero;
+            continueTextRT.anchoredPosition = Vector2.zero;
+
+            var continueTMP = continueTextGO.AddComponent<TextMeshProUGUI>();
+            continueTMP.text = "Next Planet >>";
+            continueTMP.fontSize = 18f;
+            continueTMP.color = new Color(0.7f, 0.7f, 0.7f, 1f);
+            continueTMP.alignment = TextAlignmentOptions.Center;
+            continueTMP.fontStyle = FontStyles.Italic;
+
+            levelCompletePanel.SetActive(false);
+        }
+
+        private void SpawnConfettiEffect()
+        {
+            var cam = UnityEngine.Camera.main;
+            if (cam == null) return;
+
+            var confettiGO = new GameObject("CelebrationConfetti");
+            confettiGO.transform.position = cam.transform.position
+                + cam.transform.forward * 10f
+                + cam.transform.up * 8f;
+            confettiGO.transform.rotation = Quaternion.LookRotation(Vector3.down);
+
+            var ps = confettiGO.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = ps.main;
+            main.duration = 4f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(2f, 4f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 3f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.1f, 0.3f);
+            main.maxParticles = 100;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.gravityModifier = 0.3f;
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+
+            // Random start color from confetti palette
+            Gradient colorGradient = new Gradient();
+            colorGradient.SetKeys(
+                new GradientColorKey[]
+                {
+                    new GradientColorKey(new Color(1f, 0.2f, 0.2f), 0f),     // Red
+                    new GradientColorKey(new Color(1f, 0.9f, 0.1f), 0.25f),  // Yellow
+                    new GradientColorKey(new Color(0.2f, 1f, 0.3f), 0.5f),   // Green
+                    new GradientColorKey(new Color(0.2f, 0.5f, 1f), 0.75f),  // Blue
+                    new GradientColorKey(new Color(1f, 0.4f, 0.8f), 1f)      // Pink
+                },
+                new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 1f)
+                }
+            );
+            main.startColor = new ParticleSystem.MinMaxGradient(colorGradient);
+
+            // Fade out over lifetime
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient fadeGradient = new Gradient();
+            fadeGradient.SetKeys(
+                new GradientColorKey[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(Color.white, 1f)
+                },
+                new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 0.7f),
+                    new GradientAlphaKey(0f, 1f)
+                }
+            );
+            colorOverLifetime.color = fadeGradient;
+
+            // Emission: single burst of 80 particles
+            var emission = ps.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new ParticleSystem.Burst[]
+            {
+                new ParticleSystem.Burst(0f, 80)
+            });
+
+            // Cone shape spreading outward
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 35f;
+            shape.radius = 3f;
+
+            // Tumbling rotation
+            var rotOverLifetime = ps.rotationOverLifetime;
+            rotOverLifetime.enabled = true;
+            rotOverLifetime.z = new ParticleSystem.MinMaxCurve(-180f, 180f);
+
+            // URP-compatible particle material
+            var renderer = confettiGO.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null)
+                shader = Shader.Find("Particles/Standard Unlit");
+            var mat = new Material(shader);
+            renderer.material = mat;
+
+            ps.Play();
+
+            Destroy(confettiGO, 5f);
         }
 
         private void UpdatePlayerHealth(int current, int max)
@@ -207,6 +440,33 @@ namespace SpaceCleaner.UI
                 yield return new WaitForSeconds(3f);
                 opponentDefeatedPanel.SetActive(false);
             }
+        }
+
+        private void CreateBurstCooldownIndicator()
+        {
+            var canvasRT = GetComponentInParent<Canvas>()?.GetComponent<RectTransform>();
+            if (canvasRT == null) return;
+
+            var parentRT = GetComponent<RectTransform>() ?? canvasRT;
+
+            var go = new GameObject("BurstCooldownIndicator");
+            var rt = go.AddComponent<RectTransform>();
+            rt.SetParent(parentRT, false);
+            // Bottom-right area, near fire button
+            rt.anchorMin = new Vector2(1f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(1f, 0f);
+            rt.anchoredPosition = new Vector2(-30f, 180f);
+            rt.sizeDelta = new Vector2(64f, 64f);
+
+            burstCooldownImage = go.AddComponent<Image>();
+            burstCooldownImage.color = new Color(1f, 0.45f, 0.15f, 0.6f); // Warm orange, semi-transparent
+            burstCooldownImage.type = Image.Type.Filled;
+            burstCooldownImage.fillMethod = Image.FillMethod.Radial360;
+            burstCooldownImage.fillOrigin = (int)Image.Origin360.Top;
+            burstCooldownImage.fillClockwise = false;
+            burstCooldownImage.fillAmount = 1f;
+            burstCooldownImage.enabled = false; // Hidden when not on cooldown
         }
 
         private void CreatePlayerHealthBar()

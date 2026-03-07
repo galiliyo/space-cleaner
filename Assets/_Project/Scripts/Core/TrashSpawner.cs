@@ -28,11 +28,57 @@ namespace SpaceCleaner.Core
 
         private int activeTrashCount;
 
+        /// <summary>One pool per trash prefab variant, created at runtime.</summary>
+        private ObjectPool[] trashPools;
+
         public int ActiveTrashCount => activeTrashCount;
 
         private void Start()
         {
+            InitializePools();
             SpawnTrash();
+        }
+
+        /// <summary>
+        /// Creates one ObjectPool per trash prefab variant so the spawner and
+        /// TrashPickup/AIOpponent can all share the same pools via the static registry.
+        /// </summary>
+        private void InitializePools()
+        {
+            if (trashPrefabs == null || trashPrefabs.Length == 0) return;
+
+            if (trashParent == null)
+            {
+                var go = new GameObject("TrashContainer");
+                trashParent = go.transform;
+            }
+
+            trashPools = new ObjectPool[trashPrefabs.Length];
+
+            for (int i = 0; i < trashPrefabs.Length; i++)
+            {
+                // Skip if a pool was already registered for this prefab (e.g. placed in the scene)
+                if (ObjectPool.GetPoolForPrefab(trashPrefabs[i]) != null)
+                {
+                    trashPools[i] = ObjectPool.GetPoolForPrefab(trashPrefabs[i]);
+                    continue;
+                }
+
+                // Create the GO inactive so Awake doesn't fire before we configure the pool
+                var poolGO = new GameObject($"TrashPool_{trashPrefabs[i].name}");
+                poolGO.SetActive(false);
+                poolGO.transform.SetParent(trashParent);
+
+                var pool = poolGO.AddComponent<ObjectPool>();
+
+                // Configure via runtime initializer (sets prefab, size, parent and pre-warms)
+                int preWarmCount = Mathf.CeilToInt((float)spawnCount / trashPrefabs.Length);
+                pool.InitializeRuntime(trashPrefabs[i], preWarmCount, trashParent);
+
+                poolGO.SetActive(true); // Awake will no-op since already initialized
+
+                trashPools[i] = pool;
+            }
         }
 
         public void SpawnTrash()
@@ -71,7 +117,17 @@ namespace SpaceCleaner.Core
 
                 // Random variant
                 int variant = Random.Range(0, trashPrefabs.Length);
-                GameObject trash = Instantiate(trashPrefabs[variant], spawnPos, Quaternion.identity, trashParent);
+
+                // Get from pool or fallback to Instantiate
+                GameObject trash;
+                if (trashPools != null && trashPools[variant] != null)
+                {
+                    trash = trashPools[variant].Get(spawnPos, Quaternion.identity);
+                }
+                else
+                {
+                    trash = Instantiate(trashPrefabs[variant], spawnPos, Quaternion.identity, trashParent);
+                }
 
                 // Align to surface
                 Vector3 up = randomDir;
