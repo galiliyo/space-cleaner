@@ -43,6 +43,8 @@ namespace SpaceCleaner.Enemies
         private float trashSearchTimer;
         private Transform cachedNearestTrash;
 
+        private Collider[] _searchBuffer = new Collider[128];
+
         private enum AIState { Vacuum, Combat }
         private AIState currentState = AIState.Vacuum;
 
@@ -62,7 +64,9 @@ namespace SpaceCleaner.Enemies
                 playerTransform = player.transform;
 
             collectedAmmo = startingAmmo;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[AIOpponent] Initialized. planet={planet?.name ?? "NULL"}, player={(playerTransform != null ? "OK" : "NULL")}, ammo={collectedAmmo}, orbitRadius={orbitRadius}, trashLayer={trashLayer.value}");
+#endif
         }
 
         private void Update()
@@ -129,21 +133,21 @@ namespace SpaceCleaner.Enemies
 
         private Transform FindNearestTrash()
         {
-            Collider[] nearby = Physics.OverlapSphere(transform.position, trashSearchRadius, trashLayer);
-            if (nearby.Length == 0) return null;
+            int count = Physics.OverlapSphereNonAlloc(transform.position, trashSearchRadius, _searchBuffer, trashLayer);
+            if (count == 0) return null;
 
             Transform nearest = null;
             float nearestDist = float.MaxValue;
-            foreach (var col in nearby)
+            for (int i = 0; i < count; i++)
             {
-                var trash = col.GetComponent<TrashPickup>();
+                var trash = _searchBuffer[i].GetComponent<TrashPickup>();
                 if (trash != null && trash.IsBeingCollected) continue;
 
-                float dist = Vector3.Distance(transform.position, col.transform.position);
+                float dist = Vector3.Distance(transform.position, _searchBuffer[i].transform.position);
                 if (dist < nearestDist)
                 {
                     nearestDist = dist;
-                    nearest = col.transform;
+                    nearest = _searchBuffer[i].transform;
                 }
             }
 

@@ -23,7 +23,9 @@ namespace SpaceCleaner.Player
             planet = planetTransform;
             orbitRadius = radius;
             loggedNoPlanet = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[SphericalMovement] Planet set: {planetTransform?.name}, orbitRadius={radius}");
+#endif
             SnapToSurface();
         }
 
@@ -40,7 +42,9 @@ namespace SpaceCleaner.Player
             {
                 if (!loggedNoPlanet)
                 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogWarning("[SphericalMovement] Planet reference is null — waiting for LevelSetup to assign it.");
+#endif
                     loggedNoPlanet = true;
                 }
                 return;

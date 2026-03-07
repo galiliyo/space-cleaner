@@ -16,28 +16,37 @@ namespace SpaceCleaner.Core
         [Header("Stars")]
         [SerializeField] private int _starCount = 2000;
         [SerializeField] [Range(0.5f, 1f)] private float _starBrightness = 0.9f;
-        [SerializeField] private int _textureSize = 1024;
+        [SerializeField] private int _textureSize = 512;
 
         [Header("Dim Stars")]
         [SerializeField] private int _dimStarCount = 4000;
         [SerializeField] [Range(0.1f, 0.6f)] private float _dimStarBrightness = 0.3f;
+
+        private static Shader s_SkyboxShader;
+        private static Shader s_ProceduralShader;
 
         private Material _skyboxMaterial;
         private Texture2D[] _faceTextures;
 
         private void Awake()
         {
+#if UNITY_ANDROID || UNITY_IOS
+            _textureSize = Mathf.Min(_textureSize, 512);
+#endif
             CreateSkybox();
             ApplyLighting();
         }
 
         private void CreateSkybox()
         {
-            // Use the built-in 6-sided skybox shader (works with URP)
-            Shader skyboxShader = Shader.Find("Skybox/6 Sided");
+            // Use the built-in 6-sided skybox shader (works with URP), cached
+            if (s_SkyboxShader == null) s_SkyboxShader = Shader.Find("Skybox/6 Sided");
+            Shader skyboxShader = s_SkyboxShader;
             if (skyboxShader == null)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning("SpaceSkybox: Could not find Skybox/6 Sided shader. Falling back to solid color.");
+#endif
                 SetFallbackSkybox();
                 return;
             }
@@ -140,7 +149,8 @@ namespace SpaceCleaner.Core
         private void SetFallbackSkybox()
         {
             // If the 6-sided shader is missing, just use a solid color skybox
-            Shader solidShader = Shader.Find("Skybox/Procedural");
+            if (s_ProceduralShader == null) s_ProceduralShader = Shader.Find("Skybox/Procedural");
+            Shader solidShader = s_ProceduralShader;
             if (solidShader != null)
             {
                 _skyboxMaterial = new Material(solidShader);

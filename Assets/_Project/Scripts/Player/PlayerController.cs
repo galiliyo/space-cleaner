@@ -49,24 +49,32 @@ namespace SpaceCleaner.Player
                 }
                 if (inputActions == null)
                 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogError("[PlayerController] InputActions asset is NULL! Reassign it in the Inspector.");
+#endif
                     return;
                 }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning("[PlayerController] InputActions was null — found it via fallback. Please reassign in Inspector.");
+#endif
             }
 
             var playerMap = inputActions.FindActionMap("Player");
             if (playerMap == null)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogError("[PlayerController] 'Player' action map not found in InputActions asset!");
+#endif
                 return;
             }
 
             moveAction = playerMap.FindAction("Move");
             aimAction = playerMap.FindAction("Aim");
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (moveAction == null) Debug.LogError("[PlayerController] 'Move' action not found!");
             if (aimAction == null) Debug.LogError("[PlayerController] 'Aim' action not found!");
+#endif
         }
 
         private void OnEnable()

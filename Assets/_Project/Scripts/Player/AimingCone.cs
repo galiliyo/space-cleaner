@@ -20,6 +20,9 @@ namespace SpaceCleaner.Player
         [Header("References")]
         [SerializeField] private Transform planet;
 
+        private static Shader s_UnlitShader;
+        private static Shader s_FallbackShader;
+
         private Mesh mesh;
         private MeshFilter meshFilter;
         private MeshRenderer meshRenderer;
@@ -126,12 +129,14 @@ namespace SpaceCleaner.Player
 
         private void CreateMaterial()
         {
-            // Use URP Unlit shader with transparency
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            // Use URP Unlit shader with transparency (cached to avoid repeated Shader.Find)
+            if (s_UnlitShader == null) s_UnlitShader = Shader.Find("Universal Render Pipeline/Unlit");
+            Shader shader = s_UnlitShader;
             if (shader == null)
             {
                 // Fallback
-                shader = Shader.Find("Unlit/Color");
+                if (s_FallbackShader == null) s_FallbackShader = Shader.Find("Unlit/Color");
+                shader = s_FallbackShader;
             }
 
             material = new Material(shader);

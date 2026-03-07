@@ -10,10 +10,51 @@ namespace SpaceCleaner.Core
         [SerializeField] private int damage = 1;
         [SerializeField] private LayerMask hitLayers;
 
+        private static Material s_BodyMaterial;
+        private static Material s_TrailMaterial;
+
         private float timer;
+
+        private static void EnsureSharedMaterials()
+        {
+            if (s_BodyMaterial == null)
+            {
+                var bodyShader = Shader.Find("Universal Render Pipeline/Lit");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (bodyShader == null) Debug.LogError("Projectile: URP Lit shader not found");
+#endif
+                s_BodyMaterial = new Material(bodyShader);
+                Color baseColor = new Color(1f, 0.7f, 0.1f, 1f); // warm yellow-orange
+                s_BodyMaterial.SetColor("_BaseColor", baseColor);
+                s_BodyMaterial.EnableKeyword("_EMISSION");
+                s_BodyMaterial.SetColor("_EmissionColor", baseColor * 3f); // bright glow
+                s_BodyMaterial.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            }
+
+            if (s_TrailMaterial == null)
+            {
+                var trailShader = Shader.Find("Universal Render Pipeline/Unlit");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (trailShader == null) Debug.LogError("Projectile: URP Unlit shader not found");
+#endif
+                s_TrailMaterial = new Material(trailShader);
+                s_TrailMaterial.SetColor("_BaseColor", new Color(1f, 0.8f, 0.2f, 1f));
+                // Set surface type to transparent and blending to additive
+                s_TrailMaterial.SetFloat("_Surface", 1f); // 0 = Opaque, 1 = Transparent
+                s_TrailMaterial.SetFloat("_Blend", 1f);   // 0 = Alpha, 1 = Additive (URP Unlit)
+                s_TrailMaterial.SetFloat("_SrcBlend", (float)BlendMode.One);
+                s_TrailMaterial.SetFloat("_DstBlend", (float)BlendMode.One);
+                s_TrailMaterial.SetFloat("_ZWrite", 0f);
+                s_TrailMaterial.renderQueue = (int)RenderQueue.Transparent;
+                s_TrailMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                s_TrailMaterial.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            }
+        }
 
         private void Awake()
         {
+            EnsureSharedMaterials();
+
             // --- Scale up for visibility ---
             if (transform.localScale.x < 0.5f)
             {
@@ -24,38 +65,19 @@ namespace SpaceCleaner.Core
             var meshRenderer = GetComponent<MeshRenderer>();
             if (meshRenderer != null)
             {
-                var bodyMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                Color baseColor = new Color(1f, 0.7f, 0.1f, 1f); // warm yellow-orange
-                bodyMat.SetColor("_BaseColor", baseColor);
-                bodyMat.EnableKeyword("_EMISSION");
-                bodyMat.SetColor("_EmissionColor", baseColor * 3f); // bright glow
-                bodyMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-                meshRenderer.material = bodyMat;
+                meshRenderer.sharedMaterial = s_BodyMaterial;
                 meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
             }
 
             // --- Trail renderer for motion visibility ---
-            var trail = gameObject.AddComponent<TrailRenderer>();
+            var trail = GetComponent<TrailRenderer>() ?? gameObject.AddComponent<TrailRenderer>();
             trail.time = 0.15f;
             trail.startWidth = 0.3f;
             trail.endWidth = 0f;
             trail.minVertexDistance = 0.05f;
             trail.shadowCastingMode = ShadowCastingMode.Off;
             trail.receiveShadows = false;
-
-            // Additive unlit material for glow trail
-            var trailMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            trailMat.SetColor("_BaseColor", new Color(1f, 0.8f, 0.2f, 1f));
-            // Set surface type to transparent and blending to additive
-            trailMat.SetFloat("_Surface", 1f); // 0 = Opaque, 1 = Transparent
-            trailMat.SetFloat("_Blend", 1f);   // 0 = Alpha, 1 = Additive (URP Unlit)
-            trailMat.SetFloat("_SrcBlend", (float)BlendMode.One);
-            trailMat.SetFloat("_DstBlend", (float)BlendMode.One);
-            trailMat.SetFloat("_ZWrite", 0f);
-            trailMat.renderQueue = (int)RenderQueue.Transparent;
-            trailMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            trailMat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
-            trail.material = trailMat;
+            trail.sharedMaterial = s_TrailMaterial;
 
             // Color gradient: bright yellow-orange fading to transparent
             var colorGrad = new Gradient();
@@ -87,8 +109,8 @@ namespace SpaceCleaner.Core
             }
 
             // Clear trail so old positions don't draw a streak to the new spawn point
-            var trail = GetComponent<TrailRenderer>();
-            if (trail != null)
+            // Note: OnEnable fires before Awake on first pool retrieval, so trail may not exist yet
+            if (TryGetComponent<TrailRenderer>(out var trail))
                 trail.Clear();
         }
 

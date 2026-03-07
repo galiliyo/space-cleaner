@@ -146,10 +146,10 @@ namespace SpaceCleaner.UI
             }
 
             // Update trash dots
-            var trashObjects = FindObjectsByType<Core.TrashPickup>(FindObjectsSortMode.None);
+            var trashObjects = Core.TrashPickup.ActiveInstances;
             int dotIndex = 0;
 
-            for (int i = 0; i < trashObjects.Length && dotIndex < maxTrashDots; i++)
+            for (int i = 0; i < trashObjects.Count && dotIndex < maxTrashDots; i++)
             {
                 if (trashObjects[i].IsBeingCollected) continue;
 

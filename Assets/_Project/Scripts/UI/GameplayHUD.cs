@@ -39,6 +39,7 @@ namespace SpaceCleaner.UI
         private Health playerHealth;
         private ShootingSystem shootingSystem;
         private Image burstCooldownImage;
+        private static Shader s_ParticleShader;
 
         private void Start()
         {
@@ -106,6 +107,10 @@ namespace SpaceCleaner.UI
 
             // Create burst cooldown indicator
             CreateBurstCooldownIndicator();
+
+            // Apply safe area for notched devices
+            if (GetComponent<SafeAreaHandler>() == null)
+                gameObject.AddComponent<SafeAreaHandler>();
         }
 
         private void Update()
@@ -150,7 +155,9 @@ namespace SpaceCleaner.UI
             var canvasRT = GetComponentInParent<Canvas>()?.GetComponent<RectTransform>();
             if (canvasRT == null)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning("[GameplayHUD] No parent Canvas found — cannot create touch controls.");
+#endif
                 return;
             }
 
@@ -165,7 +172,9 @@ namespace SpaceCleaner.UI
                     "<Gamepad>/leftStick",
                     new Vector2(100f, 100f)
                 );
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.Log("[GameplayHUD] Created MoveJoystick (touch control).");
+#endif
             }
 
             if (fireButton == null)
@@ -176,7 +185,9 @@ namespace SpaceCleaner.UI
                     "<Gamepad>/rightStick",
                     new Vector2(-100f, 100f)
                 );
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.Log("[GameplayHUD] Created AimFireButton (touch control).");
+#endif
             }
         }
 
@@ -403,10 +414,13 @@ namespace SpaceCleaner.UI
             // URP-compatible particle material
             var renderer = confettiGO.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
-            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (shader == null)
-                shader = Shader.Find("Particles/Standard Unlit");
-            var mat = new Material(shader);
+            if (s_ParticleShader == null)
+            {
+                s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                if (s_ParticleShader == null)
+                    s_ParticleShader = Shader.Find("Particles/Standard Unlit");
+            }
+            var mat = new Material(s_ParticleShader);
             renderer.material = mat;
 
             ps.Play();

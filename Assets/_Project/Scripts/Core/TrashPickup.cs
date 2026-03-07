@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using SpaceCleaner.Player;
 
@@ -5,6 +6,9 @@ namespace SpaceCleaner.Core
 {
     public class TrashPickup : MonoBehaviour
     {
+        private static readonly List<TrashPickup> _activeInstances = new List<TrashPickup>(256);
+        public static IReadOnlyList<TrashPickup> ActiveInstances => _activeInstances;
+
         public bool IsBeingCollected { get; private set; }
 
         private Transform target;
@@ -50,6 +54,12 @@ namespace SpaceCleaner.Core
             IsBeingCollected = false;
             target = null;
             moveSpeed = 0f;
+            _activeInstances.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            _activeInstances.Remove(this);
         }
     }
 }

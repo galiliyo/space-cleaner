@@ -25,7 +25,9 @@ namespace SpaceCleaner.Core
         private void Start()
         {
             float orbitRadius = planetRadius + hoverHeight;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[LevelSetup] Starting. planet={planet?.name ?? "NULL"}, player={(player != null ? "OK" : "NULL")}, orbitRadius={orbitRadius}");
+#endif
 
             // Setup player
             if (player != null)
@@ -34,7 +36,9 @@ namespace SpaceCleaner.Core
                 if (movement != null)
                     movement.SetPlanet(planet, orbitRadius);
                 else
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogError("[LevelSetup] SphericalMovement not found on player!");
+#endif
 
                 // Initialize aiming cone
                 var aimingCone = player.GetComponentInChildren<AimingCone>();

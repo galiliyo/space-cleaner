@@ -18,6 +18,9 @@ namespace SpaceCleaner.Player
         [SerializeField] private float particleSize = 0.35f;
         [SerializeField] private float particleLifetime = 0.5f;
 
+        private static Shader s_ParticleShader;
+        private static Shader s_FallbackParticleShader;
+
         private PlayerController playerController;
         private SphereCollider vacuumTrigger;
         private ParticleSystem vacuumVFX;
@@ -99,12 +102,14 @@ namespace SpaceCleaner.Player
             var renderer = vfxGO.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
 
-            // Create a simple additive unlit particle material (URP compatible)
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            // Create a simple additive unlit particle material (URP compatible, cached shader)
+            if (s_ParticleShader == null) s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            var mat = new Material(s_ParticleShader);
             if (mat.shader == null || mat.shader.name == "Hidden/InternalErrorShader")
             {
                 // Fallback if URP particles shader not found
-                mat = new Material(Shader.Find("Particles/Standard Unlit"));
+                if (s_FallbackParticleShader == null) s_FallbackParticleShader = Shader.Find("Particles/Standard Unlit");
+                mat = new Material(s_FallbackParticleShader);
             }
             mat.SetFloat("_Surface", 1f); // 0 = Opaque, 1 = Transparent
             mat.SetFloat("_Blend", 1f);   // 0 = Alpha, 1 = Additive
