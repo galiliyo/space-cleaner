@@ -37,6 +37,11 @@ namespace SpaceCleaner.Core
                 if (aimingCone != null)
                     aimingCone.SetPlanet(planet);
 
+                // Wire aiming cone into shooting system
+                var shooting = player.GetComponent<ShootingSystem>();
+                if (shooting != null)
+                    shooting.SetAimingCone(aimingCone);
+
                 // Position player on top of planet
                 player.transform.position = planet.position + Vector3.up * orbitRadius;
                 player.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
@@ -54,9 +59,9 @@ namespace SpaceCleaner.Core
                 aiOpponent.transform.position = planet.position + Vector3.down * orbitRadius;
                 aiOpponent.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.down);
 
-                // Add world-space health bar to opponent
-                if (aiOpponent.GetComponent<WorldSpaceHealthBar>() == null)
-                    aiOpponent.gameObject.AddComponent<WorldSpaceHealthBar>();
+                // Add opponent banner (name + health bar)
+                if (aiOpponent.GetComponent<OpponentBanner>() == null)
+                    aiOpponent.gameObject.AddComponent<OpponentBanner>();
             }
 
             // Setup radar minimap

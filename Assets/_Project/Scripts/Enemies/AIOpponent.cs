@@ -29,6 +29,9 @@ namespace SpaceCleaner.Enemies
         [SerializeField] private Transform firePoint;
         [SerializeField] private float projectileSpeed = 30f;
 
+        [Header("Identity")]
+        [SerializeField] private string opponentName = "Buzz";
+
         [Header("Behavior")]
         [SerializeField] private float aggressionRange = 30f;
         [SerializeField] private float aggressionHysteresis = 5f;
@@ -43,6 +46,7 @@ namespace SpaceCleaner.Enemies
         private enum AIState { Vacuum, Combat }
         private AIState currentState = AIState.Vacuum;
 
+        public string OpponentName => opponentName;
         public int CollectedAmmo => collectedAmmo;
 
         private void Awake()
