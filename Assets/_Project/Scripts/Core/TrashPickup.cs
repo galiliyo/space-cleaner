@@ -13,12 +13,16 @@ namespace SpaceCleaner.Core
 
         private Transform target;
         private float moveSpeed;
+        private int _registryIndex = -1;
+
+        private void Awake() { enabled = false; }
 
         public void StartCollection(Transform collector, float speed)
         {
             IsBeingCollected = true;
             target = collector;
             moveSpeed = speed;
+            enabled = true;
         }
 
         private void Update()
@@ -35,6 +39,7 @@ namespace SpaceCleaner.Core
 
         private void CompleteCollection()
         {
+            enabled = false;
             var player = target.GetComponent<PlayerController>();
             if (player != null)
             {
@@ -54,12 +59,24 @@ namespace SpaceCleaner.Core
             IsBeingCollected = false;
             target = null;
             moveSpeed = 0f;
+            enabled = false;
+            _registryIndex = _activeInstances.Count;
             _activeInstances.Add(this);
         }
 
         private void OnDisable()
         {
-            _activeInstances.Remove(this);
+            if (_registryIndex >= 0 && _registryIndex < _activeInstances.Count && _activeInstances[_registryIndex] == this)
+            {
+                int last = _activeInstances.Count - 1;
+                if (_registryIndex != last)
+                {
+                    _activeInstances[_registryIndex] = _activeInstances[last];
+                    _activeInstances[_registryIndex]._registryIndex = _registryIndex;
+                }
+                _activeInstances.RemoveAt(last);
+            }
+            _registryIndex = -1;
         }
     }
 }

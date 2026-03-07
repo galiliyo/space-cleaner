@@ -198,6 +198,12 @@ namespace SpaceCleaner.UI
                 fillImage.color = new Color(0.2f, 0.9f, 0.2f, 0.9f);
             else
                 fillImage.color = Color.Lerp(Color.red, new Color(0.2f, 0.9f, 0.2f, 0.9f), normalized / 0.3f);
+
+            if (current <= 0)
+            {
+                if (bannerCanvas != null) bannerCanvas.SetActive(false);
+                enabled = false;
+            }
         }
 
         private void OnDestroy()

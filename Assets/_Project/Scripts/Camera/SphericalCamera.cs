@@ -21,6 +21,7 @@ namespace SpaceCleaner.Camera
         [SerializeField] private float smoothTime = 0.1f;
 
         private Vector3 smoothVelocity;
+        private bool _checkDesktopInput;
 
         /// <summary>Adjust elevation at runtime (e.g. from UI slider or scroll wheel).</summary>
         public float Elevation { get => elevation; set => elevation = Mathf.Clamp(value, minElevation, maxElevation); }
@@ -33,27 +34,39 @@ namespace SpaceCleaner.Camera
             planet = planetTransform;
         }
 
+        private void Start()
+        {
+#if UNITY_ANDROID || UNITY_IOS
+            _checkDesktopInput = false;
+#else
+            _checkDesktopInput = true;
+#endif
+        }
+
         private void LateUpdate()
         {
             if (target == null || planet == null) return;
 
             // Runtime camera controls: scroll to zoom, Q/E to change elevation
-            var keyboard = Keyboard.current;
-            var mouse = Mouse.current;
-
-            if (mouse != null)
+            if (_checkDesktopInput)
             {
-                float scroll = mouse.scroll.y.ReadValue();
-                if (scroll != 0f)
-                    Distance -= scroll * zoomSpeed * Time.deltaTime;
-            }
+                var keyboard = Keyboard.current;
+                var mouse = Mouse.current;
 
-            if (keyboard != null)
-            {
-                if (keyboard.qKey.isPressed)
-                    Elevation += elevationSpeed * Time.deltaTime;
-                if (keyboard.eKey.isPressed)
-                    Elevation -= elevationSpeed * Time.deltaTime;
+                if (mouse != null)
+                {
+                    float scroll = mouse.scroll.y.ReadValue();
+                    if (scroll != 0f)
+                        Distance -= scroll * zoomSpeed * Time.deltaTime;
+                }
+
+                if (keyboard != null)
+                {
+                    if (keyboard.qKey.isPressed)
+                        Elevation += elevationSpeed * Time.deltaTime;
+                    if (keyboard.eKey.isPressed)
+                        Elevation -= elevationSpeed * Time.deltaTime;
+                }
             }
 
             Vector3 up = (target.position - planet.position).normalized;

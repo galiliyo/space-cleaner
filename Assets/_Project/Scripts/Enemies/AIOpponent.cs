@@ -18,7 +18,6 @@ namespace SpaceCleaner.Enemies
 
         [Header("Vacuum")]
         [SerializeField] private float vacuumRadius = 6f;
-        [SerializeField] private float trashSearchRadius = 1200f;
         [SerializeField] private LayerMask trashLayer;
         [SerializeField] private int startingAmmo = 10;
 
@@ -43,7 +42,7 @@ namespace SpaceCleaner.Enemies
         private float trashSearchTimer;
         private Transform cachedNearestTrash;
 
-        private Collider[] _searchBuffer = new Collider[128];
+        private static readonly WaitForSeconds s_BlinkWait = new WaitForSeconds(0.1f);
 
         private enum AIState { Vacuum, Combat }
         private AIState currentState = AIState.Vacuum;
@@ -133,24 +132,21 @@ namespace SpaceCleaner.Enemies
 
         private Transform FindNearestTrash()
         {
-            int count = Physics.OverlapSphereNonAlloc(transform.position, trashSearchRadius, _searchBuffer, trashLayer);
-            if (count == 0) return null;
+            var instances = Core.TrashPickup.ActiveInstances;
+            if (instances.Count == 0) return null;
 
             Transform nearest = null;
             float nearestDist = float.MaxValue;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < instances.Count; i++)
             {
-                var trash = _searchBuffer[i].GetComponent<TrashPickup>();
-                if (trash != null && trash.IsBeingCollected) continue;
-
-                float dist = Vector3.Distance(transform.position, _searchBuffer[i].transform.position);
+                if (instances[i].IsBeingCollected) continue;
+                float dist = Vector3.Distance(transform.position, instances[i].transform.position);
                 if (dist < nearestDist)
                 {
                     nearestDist = dist;
-                    nearest = _searchBuffer[i].transform;
+                    nearest = instances[i].transform;
                 }
             }
-
             return nearest;
         }
 
@@ -252,9 +248,9 @@ namespace SpaceCleaner.Enemies
                 for (int i = 0; i < 5; i++)
                 {
                     meshRenderer.enabled = false;
-                    yield return new WaitForSeconds(0.1f);
+                    yield return s_BlinkWait;
                     meshRenderer.enabled = true;
-                    yield return new WaitForSeconds(0.1f);
+                    yield return s_BlinkWait;
                 }
             }
 

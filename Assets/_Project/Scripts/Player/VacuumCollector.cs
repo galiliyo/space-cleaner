@@ -21,10 +21,12 @@ namespace SpaceCleaner.Player
         private static Shader s_ParticleShader;
         private static Shader s_FallbackParticleShader;
 
+        private static Material s_ParticleMaterial;
+
         private PlayerController playerController;
         private SphereCollider vacuumTrigger;
         private ParticleSystem vacuumVFX;
-        private bool trashInRange;
+        private int trashInRangeCount;
 
         private void Awake()
         {
@@ -36,6 +38,11 @@ namespace SpaceCleaner.Player
             vacuumTrigger.radius = collectRadius;
 
             CreateVacuumParticleSystem();
+        }
+
+        private void OnEnable()
+        {
+            trashInRangeCount = 0;
         }
 
         private void CreateVacuumParticleSystem()
@@ -102,51 +109,53 @@ namespace SpaceCleaner.Player
             var renderer = vfxGO.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
 
-            // Create a simple additive unlit particle material (URP compatible, cached shader)
-            if (s_ParticleShader == null) s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            var mat = new Material(s_ParticleShader);
-            if (mat.shader == null || mat.shader.name == "Hidden/InternalErrorShader")
+            // Create a simple additive unlit particle material (URP compatible, shared across instances)
+            if (s_ParticleMaterial == null)
             {
-                // Fallback if URP particles shader not found
-                if (s_FallbackParticleShader == null) s_FallbackParticleShader = Shader.Find("Particles/Standard Unlit");
-                mat = new Material(s_FallbackParticleShader);
+                if (s_ParticleShader == null) s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                var mat = new Material(s_ParticleShader);
+                if (mat.shader == null || mat.shader.name == "Hidden/InternalErrorShader")
+                {
+                    // Fallback if URP particles shader not found
+                    if (s_FallbackParticleShader == null) s_FallbackParticleShader = Shader.Find("Particles/Standard Unlit");
+                    mat = new Material(s_FallbackParticleShader);
+                }
+                mat.SetFloat("_Surface", 1f); // 0 = Opaque, 1 = Transparent
+                mat.SetFloat("_Blend", 1f);   // 0 = Alpha, 1 = Additive
+                mat.SetColor("_BaseColor", Color.white);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.EnableKeyword("_BLENDMODE_ADD");
+                mat.renderQueue = 3000;
+                s_ParticleMaterial = mat;
             }
-            mat.SetFloat("_Surface", 1f); // 0 = Opaque, 1 = Transparent
-            mat.SetFloat("_Blend", 1f);   // 0 = Alpha, 1 = Additive
-            mat.SetColor("_BaseColor", Color.white);
-            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            mat.EnableKeyword("_BLENDMODE_ADD");
-            mat.renderQueue = 3000;
-            renderer.material = mat;
+            renderer.sharedMaterial = s_ParticleMaterial;
         }
 
         private void LateUpdate()
         {
-            if (trashInRange && !vacuumVFX.isPlaying)
+            if (trashInRangeCount > 0 && !vacuumVFX.isPlaying)
             {
                 vacuumVFX.Play();
             }
-            else if (!trashInRange && vacuumVFX.isPlaying)
+            else if (trashInRangeCount <= 0 && vacuumVFX.isPlaying)
             {
                 vacuumVFX.Stop(true, ParticleSystemStopBehavior.StopEmitting);
             }
-
-            // Reset flag each frame; OnTriggerStay will set it again if trash is present
-            trashInRange = false;
         }
 
-        private void OnTriggerStay(Collider other)
+        private void OnTriggerEnter(Collider other)
         {
             if (((1 << other.gameObject.layer) & trashLayer) == 0) return;
-
+            trashInRangeCount++;
             var trash = other.GetComponent<TrashPickup>();
             if (trash != null && !trash.IsBeingCollected)
-            {
                 trash.StartCollection(transform, lerpSpeed);
-            }
+        }
 
-            // Signal that at least one trash item is within range this frame
-            trashInRange = true;
+        private void OnTriggerExit(Collider other)
+        {
+            if (((1 << other.gameObject.layer) & trashLayer) == 0) return;
+            trashInRangeCount = Mathf.Max(0, trashInRangeCount - 1);
         }
     }
 }

@@ -154,7 +154,7 @@ namespace SpaceCleaner.Player
             // Enable vertex colors
             material.EnableKeyword("_VERTEX_COLORS");
 
-            meshRenderer.material = material;
+            meshRenderer.sharedMaterial = material;
             meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             meshRenderer.receiveShadows = false;
         }

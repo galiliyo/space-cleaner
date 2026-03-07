@@ -10,11 +10,19 @@ namespace SpaceCleaner.Core
         [SerializeField] private Transform poolParent;
 
         private readonly Queue<GameObject> pool = new();
+        private readonly HashSet<GameObject> ownedInstances = new();
         private bool initialized;
 
         // --- Static registry so pooled objects can find their pool ---
         private static readonly Dictionary<GameObject, ObjectPool> prefabToPool = new();
         private static readonly Dictionary<GameObject, ObjectPool> instanceToPool = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ClearStaticState()
+        {
+            prefabToPool.Clear();
+            instanceToPool.Clear();
+        }
 
         private void Awake()
         {
@@ -59,14 +67,9 @@ namespace SpaceCleaner.Core
                 prefabToPool.Remove(prefab);
 
             // Remove all instance mappings that belong to this pool
-            var toRemove = new List<GameObject>();
-            foreach (var kvp in instanceToPool)
-            {
-                if (kvp.Value == this)
-                    toRemove.Add(kvp.Key);
-            }
-            foreach (var key in toRemove)
-                instanceToPool.Remove(key);
+            foreach (var obj in ownedInstances)
+                instanceToPool.Remove(obj);
+            ownedInstances.Clear();
         }
 
         /// <summary>
@@ -119,6 +122,7 @@ namespace SpaceCleaner.Core
             GameObject obj = Instantiate(prefab, poolParent);
             obj.SetActive(false);
             instanceToPool[obj] = this;
+            ownedInstances.Add(obj);
             return obj;
         }
 

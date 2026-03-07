@@ -23,8 +23,14 @@ namespace SpaceCleaner.UI
             ApplySafeArea();
         }
 
+        private float checkTimer;
+        private const float CheckInterval = 0.5f;
+
         private void Update()
         {
+            checkTimer -= Time.unscaledDeltaTime;
+            if (checkTimer > 0f) return;
+            checkTimer = CheckInterval;
             if (_lastSafeArea != Screen.safeArea)
                 ApplySafeArea();
         }

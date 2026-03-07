@@ -31,7 +31,9 @@ namespace SpaceCleaner.Core
         private void Awake()
         {
 #if UNITY_ANDROID || UNITY_IOS
-            _textureSize = Mathf.Min(_textureSize, 512);
+            _textureSize = Mathf.Min(_textureSize, 256);
+            _starCount = Mathf.Min(_starCount, 800);
+            _dimStarCount = Mathf.Min(_dimStarCount, 1500);
 #endif
             CreateSkybox();
             ApplyLighting();

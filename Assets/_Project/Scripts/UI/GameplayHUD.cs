@@ -40,6 +40,9 @@ namespace SpaceCleaner.UI
         private ShootingSystem shootingSystem;
         private Image burstCooldownImage;
         private static Shader s_ParticleShader;
+        private static Material s_ConfettiMaterial;
+        private int lastDisplayedAmmo = -1;
+        private int lastDisplayedCleanupPercent = -1;
 
         private void Start()
         {
@@ -193,6 +196,9 @@ namespace SpaceCleaner.UI
 
         private void UpdateAmmoDisplay(int ammo)
         {
+            if (ammo == lastDisplayedAmmo) return;
+            lastDisplayedAmmo = ammo;
+
             if (ammoText != null)
                 ammoText.text = ammo.ToString();
 
@@ -205,8 +211,12 @@ namespace SpaceCleaner.UI
             if (cleanupBar != null)
                 cleanupBar.value = percentage;
 
+            int pct = Mathf.RoundToInt(percentage * 100);
+            if (pct == lastDisplayedCleanupPercent) return;
+            lastDisplayedCleanupPercent = pct;
+
             if (cleanupPercentText != null)
-                cleanupPercentText.text = $"{Mathf.RoundToInt(percentage * 100)}%";
+                cleanupPercentText.text = $"{pct}%";
         }
 
         private void ShowLevelComplete()
@@ -414,14 +424,17 @@ namespace SpaceCleaner.UI
             // URP-compatible particle material
             var renderer = confettiGO.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
-            if (s_ParticleShader == null)
+            if (s_ConfettiMaterial == null)
             {
-                s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
                 if (s_ParticleShader == null)
-                    s_ParticleShader = Shader.Find("Particles/Standard Unlit");
+                {
+                    s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                    if (s_ParticleShader == null)
+                        s_ParticleShader = Shader.Find("Particles/Standard Unlit");
+                }
+                s_ConfettiMaterial = new Material(s_ParticleShader);
             }
-            var mat = new Material(s_ParticleShader);
-            renderer.material = mat;
+            renderer.sharedMaterial = s_ConfettiMaterial;
 
             ps.Play();
 
