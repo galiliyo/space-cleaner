@@ -29,6 +29,8 @@ namespace SpaceCleaner.Player
 
         public bool IsAutoFiring => wasAiming && aimHoldTime >= flickThreshold;
 
+        public void SetAimingCone(AimingCone cone) => aimingCone = cone;
+
         private void Awake()
         {
             playerController = GetComponent<PlayerController>();

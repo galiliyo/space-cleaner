@@ -40,6 +40,22 @@ namespace SpaceCleaner.UI
 
         private void Start()
         {
+            // Auto-find child UI elements if not serialized
+            if (ammoText == null)
+                ammoText = transform.Find("AmmoText")?.GetComponent<TextMeshProUGUI>();
+            if (cleanupPercentText == null)
+                cleanupPercentText = transform.Find("CleanupPercentText")?.GetComponent<TextMeshProUGUI>();
+            if (cleanupBar == null)
+                cleanupBar = transform.Find("CleanupBar")?.GetComponent<Slider>();
+
+            // Auto-wire Slider fillRect if missing
+            if (cleanupBar != null && cleanupBar.fillRect == null)
+            {
+                var fill = cleanupBar.transform.Find("Fill Area/Fill");
+                if (fill != null)
+                    cleanupBar.fillRect = fill.GetComponent<RectTransform>();
+            }
+
             if (levelCompletePanel != null)
                 levelCompletePanel.SetActive(false);
 
