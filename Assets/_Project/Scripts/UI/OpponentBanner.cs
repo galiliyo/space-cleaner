@@ -28,7 +28,7 @@ namespace SpaceCleaner.UI
         private void Start()
         {
             health = GetComponent<Health>();
-            cam = Camera.main?.transform;
+            cam = UnityEngine.Camera.main?.transform;
 
             string name = "Opponent";
             var ai = GetComponent<AIOpponent>();
