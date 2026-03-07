@@ -9,15 +9,15 @@ namespace SpaceCleaner.UI
     public class OpponentBanner : MonoBehaviour
     {
         [Header("Layout")]
-        [SerializeField] private Vector3 bannerOffset = new Vector3(2f, 3f, 0f);
-        [SerializeField] private float lineThickness = 0.04f;
+        [SerializeField] private Vector3 bannerOffset = new Vector3(4f, 6f, 0f);
+        [SerializeField] private float lineThickness = 0.12f;
 
         [Header("Visibility")]
         [SerializeField] private float visibleRange = 80f;
 
         [Header("Health Bar Size")]
-        [SerializeField] private float barWidth = 1.8f;
-        [SerializeField] private float barHeight = 0.18f;
+        [SerializeField] private float barWidth = 5f;
+        [SerializeField] private float barHeight = 0.5f;
 
         private Health health;
         private Transform cam;
@@ -53,7 +53,7 @@ namespace SpaceCleaner.UI
             canvas.sortingOrder = 100;
 
             var canvasRt = bannerCanvas.GetComponent<RectTransform>();
-            canvasRt.sizeDelta = new Vector2(6f, 5f);
+            canvasRt.sizeDelta = new Vector2(12f, 10f);
             canvasRt.localScale = Vector3.one;
 
             var scaler = bannerCanvas.AddComponent<CanvasScaler>();
@@ -95,7 +95,7 @@ namespace SpaceCleaner.UI
             panelRt.anchorMin = new Vector2(0.5f, 0.5f);
             panelRt.anchorMax = new Vector2(0.5f, 0.5f);
             panelRt.anchoredPosition = new Vector2(bannerOffset.x, bannerOffset.y);
-            panelRt.sizeDelta = new Vector2(barWidth, barHeight + 0.25f);
+            panelRt.sizeDelta = new Vector2(barWidth, barHeight + 0.7f);
 
             // Name text
             var nameGo = new GameObject("NameText", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -104,12 +104,12 @@ namespace SpaceCleaner.UI
             var nameRt = nameGo.GetComponent<RectTransform>();
             nameRt.anchorMin = new Vector2(0f, 0.5f);
             nameRt.anchorMax = new Vector2(1f, 1f);
-            nameRt.offsetMin = new Vector2(0.05f, 0f);
+            nameRt.offsetMin = new Vector2(0.1f, 0f);
             nameRt.offsetMax = Vector2.zero;
 
             nameText = nameGo.GetComponent<TextMeshProUGUI>();
             nameText.text = name;
-            nameText.fontSize = 0.8f;
+            nameText.fontSize = 2.5f;
             nameText.color = Color.white;
             nameText.alignment = TextAlignmentOptions.Left;
             nameText.enableWordWrapping = false;
