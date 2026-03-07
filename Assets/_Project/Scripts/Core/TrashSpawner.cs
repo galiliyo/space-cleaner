@@ -95,6 +95,11 @@ namespace SpaceCleaner.Core
             activeTrashCount = spawnCount;
             GameManager.Instance?.InitializeLevel(spawnCount);
 
+            StartCoroutine(SpawnTrashCoroutine());
+        }
+
+        private IEnumerator SpawnTrashCoroutine()
+        {
             // Generate cluster centers uniformly across the entire planet surface
             Vector3[] clusterCenters = new Vector3[clusterCount];
             for (int c = 0; c < clusterCount; c++)
@@ -140,6 +145,9 @@ namespace SpaceCleaner.Core
                 // Random scale variation (tight range)
                 float scale = Random.Range(minScale, maxScale);
                 trash.transform.localScale = Vector3.one * scale;
+
+                if ((i + 1) % 20 == 0)
+                    yield return null; // spread across frames
             }
         }
 
