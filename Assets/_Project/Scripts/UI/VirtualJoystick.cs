@@ -7,22 +7,21 @@ using UnityEngine.UI;
 namespace SpaceCleaner.UI
 {
     /// <summary>
-    /// On-screen virtual joystick for mobile touch controls.
-    /// Extends OnScreenControl directly and implements pointer/drag interfaces
-    /// to inject a Vector2 into the Input System (e.g. as Gamepad leftStick).
-    /// Renders a circular background with a draggable handle that follows the finger.
+    /// Brawl Stars-style virtual joystick: dark base ring with bright colored knob.
     /// </summary>
     [AddComponentMenu("Input/Virtual Joystick")]
     public class VirtualJoystick : OnScreenControl, IPointerDownHandler, IPointerUpHandler, IDragHandler
     {
         [Header("Joystick Settings")]
-        [SerializeField] private float movementRange = 60f;
+        [SerializeField] private float movementRange = 75f;
 
         [Header("Joystick Visuals")]
-        [SerializeField] private float backgroundRadius = 60f;
-        [SerializeField] private float handleRadius = 25f;
-        [SerializeField] private Color backgroundColor = new Color(1f, 1f, 1f, 0.25f);
-        [SerializeField] private Color handleColor = new Color(1f, 1f, 1f, 0.6f);
+        [SerializeField] private float backgroundRadius = 75f;
+        [SerializeField] private float handleRadius = 30f;
+        [SerializeField] private Color backgroundColor = new Color(0.1f, 0.1f, 0.15f, 0.55f);
+        [SerializeField] private Color borderColor = new Color(0.3f, 0.6f, 0.9f, 0.4f);
+        [SerializeField] private Color handleColor = new Color(0.3f, 0.7f, 1f, 0.9f);
+        [SerializeField] private Color handleHighlight = new Color(0.5f, 0.85f, 1f, 0.95f);
 
         [InputControl(layout = "Vector2")]
         [SerializeField]
@@ -30,16 +29,14 @@ namespace SpaceCleaner.UI
 
         private RectTransform handleRect;
         private RectTransform backgroundRect;
+        private RectTransform borderRect;
         private Image backgroundImage;
+        private Image borderImage;
         private Image handleImage;
         private Vector2 startPos;
         private Canvas parentCanvas;
         private UnityEngine.Camera canvasCamera;
 
-        /// <summary>
-        /// Current joystick direction normalized to [-1, 1] on each axis.
-        /// Can be read directly if needed outside the Input System pipeline.
-        /// </summary>
         public Vector2 Direction { get; private set; }
 
         protected override string controlPathInternal
@@ -57,20 +54,42 @@ namespace SpaceCleaner.UI
                 canvasCamera = parentCanvas.worldCamera;
 
             EnsureVisuals();
-
-            // Capture start position AFTER visuals are set up and layout is stable
             startPos = handleRect.anchoredPosition;
         }
 
-        /// <summary>
-        /// Creates the background and handle UI images if they don't already exist.
-        /// </summary>
         public void EnsureVisuals()
         {
             if (handleRect == null)
                 handleRect = GetComponent<RectTransform>();
 
-            // --- Background circle ---
+            // --- Outer border ring ---
+            if (borderRect == null)
+            {
+                var existing = transform.Find("JoystickBorder");
+                if (existing != null)
+                {
+                    borderRect = existing.GetComponent<RectTransform>();
+                    borderImage = existing.GetComponent<Image>();
+                }
+                else
+                {
+                    var borderGo = new GameObject("JoystickBorder", typeof(RectTransform), typeof(Image));
+                    borderGo.transform.SetParent(transform, false);
+                    borderRect = borderGo.GetComponent<RectTransform>();
+                    borderImage = borderGo.GetComponent<Image>();
+
+                    float borderSize = (backgroundRadius + 3f) * 2f;
+                    borderRect.anchoredPosition = Vector2.zero;
+                    borderRect.sizeDelta = new Vector2(borderSize, borderSize);
+
+                    borderImage.color = borderColor;
+                    borderImage.raycastTarget = false;
+                    borderImage.sprite = CreateRingSprite();
+                    borderImage.type = Image.Type.Simple;
+                }
+            }
+
+            // --- Background (dark filled circle) ---
             if (backgroundRect == null)
             {
                 var existing = transform.Find("JoystickBackground");
@@ -96,21 +115,23 @@ namespace SpaceCleaner.UI
                 }
             }
 
-            // --- Handle (this GameObject's own Image) ---
+            // --- Handle knob (bright colored circle with gradient) ---
             handleImage = GetComponent<Image>();
             if (handleImage == null)
                 handleImage = gameObject.AddComponent<Image>();
 
             handleImage.color = handleColor;
-            handleImage.sprite = CreateCircleSprite();
+            handleImage.sprite = CreateGradientCircleSprite();
             handleImage.type = Image.Type.Simple;
             handleImage.raycastTarget = true;
 
             handleRect.sizeDelta = new Vector2(handleRadius * 2f, handleRadius * 2f);
 
-            // Ensure the background renders behind the handle
+            // Z-order: border behind bg behind handle
+            if (borderRect != null)
+                borderRect.SetAsFirstSibling();
             if (backgroundRect != null)
-                backgroundRect.SetAsFirstSibling();
+                backgroundRect.SetSiblingIndex(1);
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -147,9 +168,8 @@ namespace SpaceCleaner.UI
             SendValueToControl(Vector2.zero);
         }
 
-        /// <summary>
-        /// Creates a simple white filled circle sprite at runtime.
-        /// </summary>
+        // --- Sprite generators (cached, shared) ---
+
         private static Sprite s_CircleSprite;
         internal static Sprite CreateCircleSprite()
         {
@@ -191,17 +211,98 @@ namespace SpaceCleaner.UI
             return s_CircleSprite;
         }
 
-        /// <summary>
-        /// Factory method to create a fully configured VirtualJoystick on a Canvas.
-        /// </summary>
-        /// <param name="parent">Parent RectTransform (should be on a Canvas).</param>
-        /// <param name="controlPath">Input System control path, e.g. "&lt;Gamepad&gt;/leftStick".</param>
-        /// <param name="anchorPosition">Anchored position relative to bottom-left.</param>
-        /// <returns>The created VirtualJoystick component.</returns>
+        private static Sprite s_RingSprite;
+        internal static Sprite CreateRingSprite()
+        {
+            if (s_RingSprite != null) return s_RingSprite;
+
+            int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            float center = size / 2f;
+            float outerR = center;
+            float innerR = center - 3f;
+
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center + 0.5f;
+                    float dy = y - center + 0.5f;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    if (dist >= innerR && dist <= outerR)
+                    {
+                        float edgeFade = 1f;
+                        if (dist > outerR - 1f) edgeFade = outerR - dist;
+                        if (dist < innerR + 1f) edgeFade = Mathf.Min(edgeFade, dist - innerR);
+                        edgeFade = Mathf.Clamp01(edgeFade);
+                        byte a = (byte)(edgeFade * 255);
+                        pixels[y * size + x] = new Color32(255, 255, 255, a);
+                    }
+                    else
+                        pixels[y * size + x] = new Color32(255, 255, 255, 0);
+                }
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply();
+
+            s_RingSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            s_RingSprite.name = "RuntimeRing";
+            return s_RingSprite;
+        }
+
+        private static Sprite s_GradientCircleSprite;
+        internal static Sprite CreateGradientCircleSprite()
+        {
+            if (s_GradientCircleSprite != null) return s_GradientCircleSprite;
+
+            int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            float center = size / 2f;
+            float radius = center;
+
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center + 0.5f;
+                    float dy = y - center + 0.5f;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    if (dist <= radius)
+                    {
+                        float t = dist / radius;
+                        // Radial gradient: bright center, slightly darker edge
+                        byte brightness = (byte)(255 - (int)(t * 80));
+                        // Slight highlight toward top-left (fake 3D)
+                        float highlight = Mathf.Clamp01(1f - ((dx + dy) / radius + 1f) * 0.3f);
+                        brightness = (byte)Mathf.Min(255, brightness + (int)(highlight * 30));
+
+                        float edgeFade = Mathf.Clamp01((radius - dist) * 2f);
+                        byte a = (byte)(edgeFade * 255);
+
+                        pixels[y * size + x] = new Color32(brightness, brightness, brightness, a);
+                    }
+                    else
+                        pixels[y * size + x] = new Color32(255, 255, 255, 0);
+                }
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply();
+
+            s_GradientCircleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            s_GradientCircleSprite.name = "RuntimeGradientCircle";
+            return s_GradientCircleSprite;
+        }
+
         public static VirtualJoystick Create(RectTransform parent, string controlPath, Vector2 anchorPosition)
         {
-            // Create INACTIVE so OnEnable (which registers the virtual device) doesn't fire
-            // before m_ControlPath is set
             var go = new GameObject("MoveJoystick", typeof(RectTransform));
             go.SetActive(false);
             go.transform.SetParent(parent, false);
@@ -211,15 +312,13 @@ namespace SpaceCleaner.UI
             rt.anchorMax = new Vector2(0f, 0f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = anchorPosition;
-            rt.sizeDelta = new Vector2(50f, 50f); // handle size set before visuals
+            rt.sizeDelta = new Vector2(60f, 60f);
 
             var joystick = go.AddComponent<VirtualJoystick>();
             joystick.m_ControlPath = controlPath;
-            joystick.movementRange = 60f;
+            joystick.movementRange = 75f;
 
-            // Now activate — OnEnable will find the control path and register the virtual device
             go.SetActive(true);
-
             joystick.EnsureVisuals();
 
             return joystick;

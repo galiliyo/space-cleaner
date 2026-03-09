@@ -7,29 +7,22 @@ using UnityEngine.UI;
 namespace SpaceCleaner.UI
 {
     /// <summary>
-    /// On-screen aim/fire control for the right side of the screen.
-    /// Extends OnScreenControl directly and implements pointer/drag interfaces
-    /// to inject a Vector2 into the Input System (e.g. as Gamepad rightStick).
-    ///
-    /// The ShootingSystem already handles the flick-vs-hold logic based on
-    /// the Aim input magnitude:
-    ///   - Aim magnitude > 0.01 for less than flickThreshold => single shot on release
-    ///   - Aim magnitude > 0.01 for more than flickThreshold => auto-fire while held
-    ///
-    /// This component adds an aim line visual that shows the current aim direction.
+    /// Brawl Stars-style aim/fire joystick: dark base ring with red/orange knob
+    /// and directional aim line.
     /// </summary>
     [AddComponentMenu("Input/Fire Button")]
     public class FireButton : OnScreenControl, IPointerDownHandler, IPointerUpHandler, IDragHandler
     {
         [Header("Fire Button Settings")]
-        [SerializeField] private float movementRange = 60f;
+        [SerializeField] private float movementRange = 75f;
 
         [Header("Fire Button Visuals")]
-        [SerializeField] private float touchAreaRadius = 60f;
-        [SerializeField] private float handleRadius = 22f;
-        [SerializeField] private Color touchAreaColor = new Color(1f, 0.3f, 0.3f, 0.2f);
-        [SerializeField] private Color handleColor = new Color(1f, 0.4f, 0.4f, 0.6f);
-        [SerializeField] private Color aimLineColor = new Color(1f, 0.5f, 0.5f, 0.5f);
+        [SerializeField] private float touchAreaRadius = 75f;
+        [SerializeField] private float handleRadius = 28f;
+        [SerializeField] private Color touchAreaColor = new Color(0.1f, 0.1f, 0.15f, 0.55f);
+        [SerializeField] private Color borderColor = new Color(0.9f, 0.4f, 0.2f, 0.4f);
+        [SerializeField] private Color handleColor = new Color(1f, 0.4f, 0.15f, 0.9f);
+        [SerializeField] private Color aimLineColor = new Color(1f, 0.5f, 0.2f, 0.6f);
 
         [Header("Aim Line")]
         [SerializeField] private float aimLineLength = 50f;
@@ -41,7 +34,9 @@ namespace SpaceCleaner.UI
 
         private RectTransform handleRect;
         private RectTransform backgroundRect;
+        private RectTransform borderRect;
         private Image backgroundImage;
+        private Image borderImage;
         private Image handleImage;
         private RectTransform aimLineRect;
         private Image aimLineImage;
@@ -49,9 +44,6 @@ namespace SpaceCleaner.UI
         private Canvas parentCanvas;
         private UnityEngine.Camera canvasCamera;
 
-        /// <summary>
-        /// Current aim direction normalized to [-1, 1] on each axis.
-        /// </summary>
         public Vector2 AimDirection { get; private set; }
 
         protected override string controlPathInternal
@@ -69,20 +61,42 @@ namespace SpaceCleaner.UI
                 canvasCamera = parentCanvas.worldCamera;
 
             EnsureVisuals();
-
-            // Capture start position AFTER visuals are set up and layout is stable
             startPos = handleRect.anchoredPosition;
         }
 
-        /// <summary>
-        /// Creates the touch area background, handle, and aim line visuals.
-        /// </summary>
         public void EnsureVisuals()
         {
             if (handleRect == null)
                 handleRect = GetComponent<RectTransform>();
 
-            // --- Background touch area ---
+            // --- Outer border ring ---
+            if (borderRect == null)
+            {
+                var existing = transform.Find("FireBorder");
+                if (existing != null)
+                {
+                    borderRect = existing.GetComponent<RectTransform>();
+                    borderImage = existing.GetComponent<Image>();
+                }
+                else
+                {
+                    var borderGo = new GameObject("FireBorder", typeof(RectTransform), typeof(Image));
+                    borderGo.transform.SetParent(transform, false);
+                    borderRect = borderGo.GetComponent<RectTransform>();
+                    borderImage = borderGo.GetComponent<Image>();
+
+                    float borderSize = (touchAreaRadius + 3f) * 2f;
+                    borderRect.anchoredPosition = Vector2.zero;
+                    borderRect.sizeDelta = new Vector2(borderSize, borderSize);
+
+                    borderImage.color = borderColor;
+                    borderImage.raycastTarget = false;
+                    borderImage.sprite = VirtualJoystick.CreateRingSprite();
+                    borderImage.type = Image.Type.Simple;
+                }
+            }
+
+            // --- Background touch area (dark filled circle) ---
             if (backgroundRect == null)
             {
                 var existing = transform.Find("FireBackground");
@@ -108,13 +122,13 @@ namespace SpaceCleaner.UI
                 }
             }
 
-            // --- Handle (this object's Image) ---
+            // --- Handle knob (red/orange gradient circle) ---
             handleImage = GetComponent<Image>();
             if (handleImage == null)
                 handleImage = gameObject.AddComponent<Image>();
 
             handleImage.color = handleColor;
-            handleImage.sprite = VirtualJoystick.CreateCircleSprite();
+            handleImage.sprite = VirtualJoystick.CreateGradientCircleSprite();
             handleImage.type = Image.Type.Simple;
             handleImage.raycastTarget = true;
 
@@ -145,13 +159,14 @@ namespace SpaceCleaner.UI
                 }
             }
 
-            // Initially hidden
             if (aimLineRect != null)
                 aimLineRect.gameObject.SetActive(false);
 
-            // Ensure background renders behind handle
+            // Z-order: border, bg, aim line, handle on top
+            if (borderRect != null)
+                borderRect.SetAsFirstSibling();
             if (backgroundRect != null)
-                backgroundRect.SetAsFirstSibling();
+                backgroundRect.SetSiblingIndex(1);
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -208,17 +223,8 @@ namespace SpaceCleaner.UI
             }
         }
 
-        /// <summary>
-        /// Factory method to create a fully configured FireButton on a Canvas.
-        /// </summary>
-        /// <param name="parent">Parent RectTransform (should be on a Canvas).</param>
-        /// <param name="controlPath">Input System control path, e.g. "&lt;Gamepad&gt;/rightStick".</param>
-        /// <param name="anchorPosition">Anchored position relative to bottom-right.</param>
-        /// <returns>The created FireButton component.</returns>
         public static FireButton Create(RectTransform parent, string controlPath, Vector2 anchorPosition)
         {
-            // Create INACTIVE so OnEnable (which registers the virtual device) doesn't fire
-            // before m_ControlPath is set
             var go = new GameObject("AimFireButton", typeof(RectTransform));
             go.SetActive(false);
             go.transform.SetParent(parent, false);
@@ -228,15 +234,13 @@ namespace SpaceCleaner.UI
             rt.anchorMax = new Vector2(1f, 0f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = anchorPosition;
-            rt.sizeDelta = new Vector2(44f, 44f); // handle size set before visuals
+            rt.sizeDelta = new Vector2(56f, 56f);
 
             var fireButton = go.AddComponent<FireButton>();
             fireButton.m_ControlPath = controlPath;
-            fireButton.movementRange = 60f;
+            fireButton.movementRange = 75f;
 
-            // Now activate — OnEnable will find the control path and register the virtual device
             go.SetActive(true);
-
             fireButton.EnsureVisuals();
 
             return fireButton;

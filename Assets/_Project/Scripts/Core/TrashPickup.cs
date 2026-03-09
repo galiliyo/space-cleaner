@@ -15,14 +15,11 @@ namespace SpaceCleaner.Core
         private float moveSpeed;
         private int _registryIndex = -1;
 
-        private void Awake() { enabled = false; }
-
         public void StartCollection(Transform collector, float speed)
         {
             IsBeingCollected = true;
             target = collector;
             moveSpeed = speed;
-            enabled = true;
         }
 
         private void Update()
@@ -39,7 +36,7 @@ namespace SpaceCleaner.Core
 
         private void CompleteCollection()
         {
-            enabled = false;
+            IsBeingCollected = false;
             var player = target.GetComponent<PlayerController>();
             if (player != null)
             {
@@ -59,7 +56,6 @@ namespace SpaceCleaner.Core
             IsBeingCollected = false;
             target = null;
             moveSpeed = 0f;
-            enabled = false;
             _registryIndex = _activeInstances.Count;
             _activeInstances.Add(this);
         }

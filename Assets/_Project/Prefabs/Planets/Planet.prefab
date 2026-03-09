@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8795937080044418367}
   - component: {fileID: 8989931646507247945}
   - component: {fileID: 6407169178792743492}
+  - component: {fileID: 4680186049494915479}
   m_Layer: 10
   m_Name: Planet
   m_TagString: Planet
@@ -112,3 +113,23 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4680186049494915479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2873505804862999164}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7ca3f317790c6c419d5518b4e13c1f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpaceCleaner.Core.PlanetEarth
+  textureSize: 512
+  seed: 42
+  deepOcean: {r: 0.05, g: 0.12, b: 0.35, a: 1}
+  shallowOcean: {r: 0.1, g: 0.25, b: 0.55, a: 1}
+  lowland: {r: 0.15, g: 0.45, b: 0.12, a: 1}
+  highland: {r: 0.4, g: 0.35, b: 0.2, a: 1}
+  mountain: {r: 0.55, g: 0.5, b: 0.4, a: 1}
+  ice: {r: 0.85, g: 0.9, b: 0.95, a: 1}

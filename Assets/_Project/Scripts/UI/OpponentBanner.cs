@@ -20,10 +20,10 @@ namespace SpaceCleaner.UI
         [SerializeField] private float barHeight = 0.5f;
 
         [Header("Scaling")]
-        [SerializeField] private float baseScale = 3f;
-        [SerializeField] private float scalePerDistance = 0.08f;
-        [SerializeField] private float minScale = 2f;
-        [SerializeField] private float maxScale = 10f;
+        [SerializeField] private float baseScale = 0.3f;
+        [SerializeField] private float scalePerDistance = 0.008f;
+        [SerializeField] private float minScale = 0.2f;
+        [SerializeField] private float maxScale = 1f;
 
         [Header("Smoothing")]
         [SerializeField] private float positionSmoothing = 8f;

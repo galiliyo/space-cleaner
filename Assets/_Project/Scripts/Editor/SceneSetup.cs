@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEditor;
 using UnityEngine.UI;
 using TMPro;
@@ -40,11 +41,12 @@ namespace SpaceCleaner.EditorTools
                 return;
             }
 
-            // Clean up existing objects (except camera and light)
+            // Clean up existing objects (except camera, light, and event system)
             var roots = scene.GetRootGameObjects();
             foreach (var root in roots)
             {
-                if (root.name == "Main Camera" || root.name == "Directional Light")
+                if (root.name == "Main Camera" || root.name == "Directional Light"
+                    || root.name == "EventSystem")
                     continue;
                 Undo.DestroyObjectImmediate(root);
             }
@@ -130,6 +132,15 @@ namespace SpaceCleaner.EditorTools
                 so.ApplyModifiedProperties();
             }
 
+            // Increase enemy HP for better gameplay balance
+            var aiHealth = ai.GetComponent<Health>();
+            if (aiHealth != null)
+            {
+                var hso = new SerializedObject(aiHealth);
+                hso.FindProperty("maxHealth").intValue = 50;
+                hso.ApplyModifiedProperties();
+            }
+
             // --- Trash Spawner ---
             var spawnerGo = new GameObject("TrashSpawner");
             var spawner = spawnerGo.AddComponent<TrashSpawner>();
@@ -174,8 +185,30 @@ namespace SpaceCleaner.EditorTools
             lsSo.FindProperty("aiOpponent").objectReferenceValue = aiComp;
             lsSo.ApplyModifiedProperties();
 
+            // --- EventSystem (required for UI pointer events / joysticks) ---
+            if (Object.FindAnyObjectByType<EventSystem>() == null)
+            {
+                var esGo = new GameObject("EventSystem");
+                esGo.AddComponent<EventSystem>();
+                esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                Undo.RegisterCreatedObjectUndo(esGo, "Create EventSystem");
+            }
+
             // --- HUD Canvas ---
             CreateHUDCanvas();
+
+            // --- Configure Directional Light for space ---
+            var light = GameObject.Find("Directional Light");
+            if (light != null)
+            {
+                var dirLight = light.GetComponent<Light>();
+                if (dirLight != null)
+                {
+                    dirLight.shadows = LightShadows.Soft;
+                    dirLight.shadowBias = 0.02f;
+                    dirLight.shadowNormalBias = 0.3f;
+                }
+            }
 
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log("[SceneSetup] Gameplay scene setup complete!");
@@ -327,6 +360,9 @@ namespace SpaceCleaner.EditorTools
             go.isStatic = true;
 
             ApplyMaterial(go, "Planet_Mat");
+
+            // Add procedural Earth texture generator
+            go.AddComponent<PlanetEarth>();
 
             SavePrefab(go, $"{PrefabRoot}/Planets/Planet.prefab");
             Object.DestroyImmediate(go);
