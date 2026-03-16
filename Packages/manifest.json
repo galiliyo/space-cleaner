@@ -1,5 +1,15 @@
 {
+  "scopedRegistries": [
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.demigiant.dotween"
+      ]
+    }
+  ],
   "dependencies": {
+    "com.demigiant.dotween": "1.2.765",
     "com.unity.cinemachine": "3.1.3",
     "com.gamelovers.mcp-unity": "https://github.com/CoderGamester/mcp-unity.git",
     "com.unity.2d.sprite": "1.0.0",
