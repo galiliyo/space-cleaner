@@ -12,10 +12,10 @@ namespace SpaceCleaner.Player
         [SerializeField] private LayerMask trashLayer;
 
         [Header("Vacuum VFX")]
-        [SerializeField] private Color vacuumColorStart = new Color(0.4f, 0.8f, 1f, 0.8f); // cyan
-        [SerializeField] private Color vacuumColorEnd   = new Color(0.2f, 0.5f, 1f, 0f);   // blue, fade out
+        [SerializeField] private Color vacuumColorStart = new Color(0.6f, 0.85f, 1f, 0.35f);
+        [SerializeField] private Color vacuumColorEnd   = new Color(0.4f, 0.7f, 1f, 0f);
         [SerializeField] private int maxParticles = 25;
-        [SerializeField] private float particleSize = 0.35f;
+        [SerializeField] private float particleSize = 0.15f;
         [SerializeField] private float particleLifetime = 0.5f;
 
         private static Shader s_ParticleShader;
@@ -126,6 +126,7 @@ namespace SpaceCleaner.Player
                 mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 mat.EnableKeyword("_BLENDMODE_ADD");
                 mat.renderQueue = 3000;
+                mat.SetTexture("_BaseMap", CreateSoftCircleTexture(32));
                 s_ParticleMaterial = mat;
             }
             renderer.sharedMaterial = s_ParticleMaterial;
@@ -156,6 +157,29 @@ namespace SpaceCleaner.Player
         {
             if (((1 << other.gameObject.layer) & trashLayer) == 0) return;
             trashInRangeCount = Mathf.Max(0, trashInRangeCount - 1);
+        }
+
+        private static Texture2D CreateSoftCircleTexture(int size)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            float center = size * 0.5f;
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x - center + 0.5f) / center;
+                    float dy = (y - center + 0.5f) / center;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(1f - dist);
+                    alpha *= alpha; // quadratic falloff for soft edges
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+            tex.SetPixels(pixels);
+            tex.Apply(false, true);
+            return tex;
         }
     }
 }

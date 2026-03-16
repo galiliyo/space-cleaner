@@ -79,8 +79,19 @@ namespace SpaceCleaner.Core
             if (GetComponent<SpaceSkybox>() == null)
                 gameObject.AddComponent<SpaceSkybox>();
 
+            // Setup moon
+            SetupMoon();
+
             // Setup radar minimap
             SetupRadar();
+        }
+
+        private void SetupMoon()
+        {
+            if (planet == null) return;
+            var moonGo = new GameObject("Moon");
+            var moon = moonGo.AddComponent<Moon>();
+            moon.SetPlanet(planet);
         }
 
         private void SetupProjectilePool()
