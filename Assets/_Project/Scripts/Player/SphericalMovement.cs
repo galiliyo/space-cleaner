@@ -9,8 +9,8 @@ namespace SpaceCleaner.Player
         [SerializeField] private float orbitRadius = 52f; // planet radius + hover height
 
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 60f;
-        [SerializeField] private float rotationSmoothSpeed = 25f;
+        [SerializeField] private float moveSpeed = 20f;
+        [SerializeField] private float rotationSmoothSpeed = 10f;
 
         private Vector2 moveInput;
         private Vector3 velocity;

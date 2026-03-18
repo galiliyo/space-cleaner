@@ -4,23 +4,20 @@ using UnityEngine.Rendering;
 namespace SpaceCleaner.Core
 {
     /// <summary>
-    /// Creates a procedural space skybox at runtime: a star field texture on a 6-sided skybox material.
-    /// Attach to any GameObject in the scene (e.g. GameManager). Runs in Awake so it applies before first frame.
+    /// Sets up a space skybox. Prefers a pre-made skybox material from the project
+    /// (e.g. from SpaceSkies Free asset pack). Falls back to fast procedural generation.
     /// </summary>
     public class SpaceSkybox : MonoBehaviour
     {
-        [Header("Sky Colors")]
+        [Header("Custom Skybox (drag a material here to skip procedural generation)")]
+        [SerializeField] private Material customSkybox;
+
+        [Header("Fallback Procedural Settings")]
         [SerializeField] private Color _skyTint = new Color(0.02f, 0.02f, 0.06f, 1f);
-        [SerializeField] private Color _ambientColor = new Color(0.15f, 0.15f, 0.25f, 1f);
-
-        [Header("Stars")]
-        [SerializeField] private int _starCount = 2000;
-        [SerializeField] [Range(0.5f, 1f)] private float _starBrightness = 0.9f;
-        [SerializeField] private int _textureSize = 512;
-
-        [Header("Dim Stars")]
-        [SerializeField] private int _dimStarCount = 4000;
-        [SerializeField] [Range(0.1f, 0.6f)] private float _dimStarBrightness = 0.3f;
+        [SerializeField] private Color _ambientColor = new Color(0.35f, 0.35f, 0.45f, 1f);
+        [SerializeField] private int _starCount = 1200;
+        [SerializeField] private int _dimStarCount = 2500;
+        [SerializeField] private int _textureSize = 256;
 
         private static Shader s_SkyboxShader;
         private static Shader s_ProceduralShader;
@@ -30,32 +27,90 @@ namespace SpaceCleaner.Core
 
         private void Awake()
         {
-#if UNITY_ANDROID || UNITY_IOS
-            _textureSize = Mathf.Min(_textureSize, 256);
-            _starCount = Mathf.Min(_starCount, 800);
-            _dimStarCount = Mathf.Min(_dimStarCount, 1500);
-#endif
-            CreateSkybox();
+            // Try to use a custom skybox material first
+            if (TryApplyCustomSkybox())
+            {
+                ApplyLighting();
+                return;
+            }
+
+            // Try to find a skybox material in the project at known paths
+            if (TryFindProjectSkybox())
+            {
+                ApplyLighting();
+                return;
+            }
+
+            // Fall back to fast procedural generation
+            CreateProceduralSkybox();
             ApplyLighting();
         }
 
-        private void CreateSkybox()
+        private bool TryApplyCustomSkybox()
         {
-            // Use the built-in 6-sided skybox shader (works with URP), cached
-            if (s_SkyboxShader == null) s_SkyboxShader = Shader.Find("Skybox/6 Sided");
-            Shader skyboxShader = s_SkyboxShader;
-            if (skyboxShader == null)
+            if (customSkybox == null) return false;
+            RenderSettings.skybox = customSkybox;
+            DynamicGI.UpdateEnvironment();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[SpaceSkybox] Using custom skybox material.");
+#endif
+            return true;
+        }
+
+        private bool TryFindProjectSkybox()
+        {
+            // Check if a skybox material is already assigned in RenderSettings
+            var existing = RenderSettings.skybox;
+            if (existing != null && existing.shader != null
+                && existing.shader.name.Contains("Skybox")
+                && existing.shader.name != "Skybox/Procedural")
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning("SpaceSkybox: Could not find Skybox/6 Sided shader. Falling back to solid color.");
+                Debug.Log($"[SpaceSkybox] Using existing skybox material: {existing.name}");
 #endif
+                return true;
+            }
+
+#if UNITY_EDITOR
+            // In editor, search for skybox materials in known paths
+            string[] searchPaths = {
+                "Assets/_Project/Materials/Skybox",
+                "Assets/SpaceSkies Free",
+                "Assets/Skybox",
+                "Assets/Materials"
+            };
+
+            foreach (var path in searchPaths)
+            {
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:Material", new[] { path });
+                foreach (var guid in guids)
+                {
+                    var matPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                    var mat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                    if (mat != null && mat.shader != null && mat.shader.name.Contains("Skybox"))
+                    {
+                        RenderSettings.skybox = mat;
+                        DynamicGI.UpdateEnvironment();
+                        Debug.Log($"[SpaceSkybox] Found skybox material at: {matPath}");
+                        return true;
+                    }
+                }
+            }
+#endif
+            return false;
+        }
+
+        private void CreateProceduralSkybox()
+        {
+            if (s_SkyboxShader == null) s_SkyboxShader = Shader.Find("Skybox/6 Sided");
+            if (s_SkyboxShader == null)
+            {
                 SetFallbackSkybox();
                 return;
             }
 
-            _skyboxMaterial = new Material(skyboxShader);
+            _skyboxMaterial = new Material(s_SkyboxShader);
 
-            // Generate 6 face textures (one per cube face) with different star patterns
             string[] faceProperties = {
                 "_FrontTex", "_BackTex", "_LeftTex", "_RightTex", "_UpTex", "_DownTex"
             };
@@ -63,77 +118,84 @@ namespace SpaceCleaner.Core
             _faceTextures = new Texture2D[6];
             for (int i = 0; i < 6; i++)
             {
-                _faceTextures[i] = GenerateStarTexture(i * 7919); // different seed per face
+                _faceTextures[i] = GenerateStarTexture(i * 7919);
                 _skyboxMaterial.SetTexture(faceProperties[i], _faceTextures[i]);
             }
 
-            // Tint and exposure
-            _skyboxMaterial.SetColor("_Tint", Color.white);
-            _skyboxMaterial.SetFloat("_Exposure", 1f);
+            _skyboxMaterial.SetColor("_Tint", new Color(0.5f, 0.5f, 0.55f, 1f));
+            _skyboxMaterial.SetFloat("_Exposure", 0.8f);
             _skyboxMaterial.SetFloat("_Rotation", 0f);
 
             RenderSettings.skybox = _skyboxMaterial;
             DynamicGI.UpdateEnvironment();
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[SpaceSkybox] Using procedural skybox. For better visuals, import 'SpaceSkies Free' from Unity Asset Store.");
+#endif
         }
 
+        /// <summary>
+        /// Fast star-only texture generation. No heavy Perlin noise loops.
+        /// </summary>
         private Texture2D GenerateStarTexture(int seed)
         {
             int size = _textureSize;
-            Texture2D tex = new Texture2D(size, size, TextureFormat.RGB24, false);
+            var tex = new Texture2D(size, size, TextureFormat.RGB24, false);
             tex.filterMode = FilterMode.Bilinear;
             tex.wrapMode = TextureWrapMode.Clamp;
 
-            // Fill with dark space color
-            Color[] pixels = new Color[size * size];
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                pixels[i] = _skyTint;
-            }
+            var pixels = new Color[size * size];
 
-            // Use a seeded random for reproducibility
+            // Fill with dark sky
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = _skyTint;
+
             Random.State oldState = Random.state;
             Random.InitState(seed);
 
-            // Bright stars
+            // Bright stars with color variation
             for (int i = 0; i < _starCount; i++)
             {
                 int x = Random.Range(0, size);
                 int y = Random.Range(0, size);
-                float brightness = Random.Range(_starBrightness * 0.7f, _starBrightness);
+                float brightness = Random.Range(0.6f, 1f);
 
-                // Slight color variation: some stars are warm, some cool
-                float r = brightness * Random.Range(0.85f, 1f);
-                float g = brightness * Random.Range(0.85f, 1f);
-                float b = brightness * Random.Range(0.9f, 1f);
-                Color starColor = new Color(r, g, b, 1f);
+                // Star color variety: white, blue-white, yellow-white
+                float colorType = Random.Range(0f, 1f);
+                Color starColor;
+                if (colorType < 0.6f)
+                    starColor = new Color(brightness, brightness, brightness * 1.05f); // white-blue
+                else if (colorType < 0.85f)
+                    starColor = new Color(brightness, brightness * 0.95f, brightness * 0.8f); // warm
+                else
+                    starColor = new Color(brightness * 0.8f, brightness * 0.9f, brightness); // blue
 
                 pixels[y * size + x] = starColor;
 
-                // Some bright stars get a small glow (2x2)
-                if (brightness > _starBrightness * 0.9f)
+                // Glow for bright stars
+                if (brightness > 0.85f)
                 {
-                    Color glowColor = starColor * 0.4f;
-                    SetPixelSafe(pixels, size, x + 1, y, glowColor);
-                    SetPixelSafe(pixels, size, x - 1, y, glowColor);
-                    SetPixelSafe(pixels, size, x, y + 1, glowColor);
-                    SetPixelSafe(pixels, size, x, y - 1, glowColor);
+                    Color glow = starColor * 0.35f;
+                    SetPixelSafe(pixels, size, x + 1, y, glow);
+                    SetPixelSafe(pixels, size, x - 1, y, glow);
+                    SetPixelSafe(pixels, size, x, y + 1, glow);
+                    SetPixelSafe(pixels, size, x, y - 1, glow);
                 }
             }
 
-            // Dim / distant stars
+            // Dim background stars
             for (int i = 0; i < _dimStarCount; i++)
             {
                 int x = Random.Range(0, size);
                 int y = Random.Range(0, size);
-                float brightness = Random.Range(_dimStarBrightness * 0.5f, _dimStarBrightness);
-                Color dimColor = new Color(brightness, brightness, brightness * 1.1f, 1f);
-                pixels[y * size + x] = dimColor;
+                float b = Random.Range(0.08f, 0.25f);
+                pixels[y * size + x] = new Color(b, b, b * 1.1f);
             }
 
             Random.state = oldState;
 
             tex.SetPixels(pixels);
-            tex.Apply(false, true); // makeNoLongerReadable = true to save memory
+            tex.Apply(false, true); // no mipmaps, make non-readable
             return tex;
         }
 
@@ -142,7 +204,6 @@ namespace SpaceCleaner.Core
             if (x >= 0 && x < size && y >= 0 && y < size)
             {
                 int idx = y * size + x;
-                // Blend: keep whichever is brighter
                 if (pixels[idx].grayscale < color.grayscale)
                     pixels[idx] = color;
             }
@@ -150,12 +211,10 @@ namespace SpaceCleaner.Core
 
         private void SetFallbackSkybox()
         {
-            // If the 6-sided shader is missing, just use a solid color skybox
             if (s_ProceduralShader == null) s_ProceduralShader = Shader.Find("Skybox/Procedural");
-            Shader solidShader = s_ProceduralShader;
-            if (solidShader != null)
+            if (s_ProceduralShader != null)
             {
-                _skyboxMaterial = new Material(solidShader);
+                _skyboxMaterial = new Material(s_ProceduralShader);
                 _skyboxMaterial.SetColor("_SkyTint", _skyTint);
                 _skyboxMaterial.SetColor("_GroundColor", _skyTint);
                 _skyboxMaterial.SetFloat("_Exposure", 0.1f);
@@ -163,9 +222,8 @@ namespace SpaceCleaner.Core
             }
             else
             {
-                // Last resort: clear camera to solid color
                 RenderSettings.skybox = null;
-                UnityEngine.Camera cam = UnityEngine.Camera.main;
+                var cam = UnityEngine.Camera.main;
                 if (cam != null)
                 {
                     cam.clearFlags = CameraClearFlags.SolidColor;
@@ -176,21 +234,15 @@ namespace SpaceCleaner.Core
 
         private void ApplyLighting()
         {
-            // Set ambient lighting to dark space tones
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientSkyColor = _ambientColor;
             RenderSettings.ambientLight = _ambientColor;
-
-            // Disable default reflection (no bright reflections in space)
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
-
-            // Fog off
             RenderSettings.fog = false;
         }
 
         private void OnDestroy()
         {
-            // Clean up runtime materials and textures
             if (_skyboxMaterial != null)
                 Destroy(_skyboxMaterial);
 

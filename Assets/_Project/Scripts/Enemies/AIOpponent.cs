@@ -19,7 +19,7 @@ namespace SpaceCleaner.Enemies
         [Header("Vacuum")]
         [SerializeField] private float vacuumRadius = 6f;
         [SerializeField] private LayerMask trashLayer;
-        [SerializeField] private int startingAmmo = 10;
+        [SerializeField] private int startingAmmo = 30;
 
         [Header("Combat")]
         [SerializeField] private float shootRange = 25f;

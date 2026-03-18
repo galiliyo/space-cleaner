@@ -70,7 +70,8 @@ namespace SpaceCleaner.Core
             }
 
             // --- Trail renderer for motion visibility ---
-            var trail = GetComponent<TrailRenderer>() ?? gameObject.AddComponent<TrailRenderer>();
+            var trail = GetComponent<TrailRenderer>();
+            if (trail == null) trail = gameObject.AddComponent<TrailRenderer>();
             trail.time = 0.15f;
             trail.startWidth = 0.3f;
             trail.endWidth = 0f;
