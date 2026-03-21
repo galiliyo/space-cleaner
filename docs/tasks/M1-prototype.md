@@ -10,7 +10,7 @@
 
 - [x] Install TextMeshPro package (included in com.unity.ugui 2.0.0)
 - [x] Install Cinemachine package (added 3.1.3)
-- [ ] Install DOTween (via OpenUPM or .unitypackage)
+- [x] Install DOTween (via OpenUPM scoped registry, v1.2.765)
 - [x] Update application bundle ID from template default (com.spacecleaner.game)
 - [x] Define custom layers (Player=6, Enemy=7, Trash=8, Projectile=9, Planet=10)
 - [x] Define custom tags (Trash, PlayerShip, EnemyShip, Planet, Projectile)
@@ -58,7 +58,7 @@
 - [x] Add vacuum particle effect — VacuumCollector creates inward-flowing sparkles
 - [x] Implement ammo pool with soft cap (50) — PlayerController.cs
 - [x] Implement overflow decay when above soft cap
-- [ ] Visual glow effect for collection radius
+- [x] Visual glow effect for collection radius — procedural sphere with additive URP material, pulses when collecting
 
 > GDD Ref: §2.4 Collection and Ammo, §10.2 Key Systems
 

@@ -10,3 +10,4 @@
 *.slnx
 *.suo
 *.user
+.claude/worktrees/

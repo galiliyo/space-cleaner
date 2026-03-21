@@ -42,7 +42,14 @@
       "mcp__ide__executeCode",
       "mcp__ide__getDiagnostics",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "mcp__plugin_serena_serena__get_current_config",
+      "mcp__plugin_serena_serena__find_file",
+      "mcp__plugin_serena_serena__find_symbol"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "mcp-unity"
+  ]
 }
