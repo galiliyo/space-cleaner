@@ -10,7 +10,7 @@ namespace SpaceCleaner.Player
         [SerializeField] private InputActionAsset inputActions;
 
         [Header("Ammo")]
-        [SerializeField] private int ammoCount;
+        [SerializeField] private int ammoCount = 5;
         [SerializeField] private int softCap = 50;
         [SerializeField] private float overflowDecayRate = 2f; // ammo lost per second when over cap
 
@@ -84,6 +84,9 @@ namespace SpaceCleaner.Player
 
         private void OnDisable()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning($"[PlayerController] OnDisable fired! Stack: {System.Environment.StackTrace}");
+#endif
             if (inputActions != null) inputActions.Disable();
         }
 

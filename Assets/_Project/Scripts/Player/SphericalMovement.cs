@@ -9,11 +9,19 @@ namespace SpaceCleaner.Player
         [SerializeField] private float orbitRadius = 52f; // planet radius + hover height
 
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 20f;
-        [SerializeField] private float rotationSmoothSpeed = 10f;
+        [SerializeField] private float moveSpeed = 2.7f;
+        [Tooltip("Max degrees per second the ship can turn. 50 ≈ 7.2 s for a full 360°.")]
+        [SerializeField] private float turnSpeed = 50f;
 
         private Vector2 moveInput;
         private Vector3 velocity;
+        private Vector3 bounceVelocity;
+
+        [SerializeField] private float bounceDrag = 6f;
+
+        /// <summary>Cumulative angular displacement (radians) for visual planet rotation.</summary>
+        private static float s_cumulativeAngle;
+        public static float CumulativeAngle => s_cumulativeAngle;
 
         public Transform Planet => planet;
         public float OrbitRadius => orbitRadius;
@@ -34,6 +42,11 @@ namespace SpaceCleaner.Player
             moveInput = input;
         }
 
+        public void ApplyBounce(Vector3 surfaceDir, float speed)
+        {
+            bounceVelocity = surfaceDir * speed;
+        }
+
         private bool loggedNoPlanet;
 
         private void Update()
@@ -49,7 +62,27 @@ namespace SpaceCleaner.Player
                 }
                 return;
             }
-            if (moveInput.sqrMagnitude < 0.01f) return;
+            // Apply bounce impulse (decays each frame)
+            if (bounceVelocity.sqrMagnitude > 0.001f)
+            {
+                Vector3 bUp = (transform.position - planet.position).normalized;
+                Vector3 bDir = Vector3.ProjectOnPlane(bounceVelocity, bUp).normalized;
+                float bAngSpeed = bounceVelocity.magnitude / orbitRadius;
+                float bAngle = bAngSpeed * Time.deltaTime;
+                Vector3 bFromCenter = transform.position - planet.position;
+                Vector3 bAxis = Vector3.Cross(bFromCenter.normalized, bDir).normalized;
+                if (bAxis.sqrMagnitude > 0.001f)
+                {
+                    Quaternion bRot = Quaternion.AngleAxis(bAngle * Mathf.Rad2Deg, bAxis);
+                    transform.position = planet.position + bRot * bFromCenter;
+                }
+                bounceVelocity = Vector3.MoveTowards(bounceVelocity, Vector3.zero, bounceDrag * Time.deltaTime);
+                SnapToSurface();
+            }
+
+            // Clamp: no backward movement (only forward + strafe)
+            Vector2 clampedInput = new Vector2(moveInput.x, Mathf.Max(0f, moveInput.y));
+            if (clampedInput.sqrMagnitude < 0.01f) return;
 
             // Get local "right" and "forward" directions relative to sphere surface
             Vector3 up = (transform.position - planet.position).normalized;
@@ -60,7 +93,7 @@ namespace SpaceCleaner.Player
             right = Vector3.Cross(up, forward).normalized;
 
             // Build movement direction from input
-            Vector3 moveDir = (forward * moveInput.y + right * moveInput.x).normalized;
+            Vector3 moveDir = (forward * clampedInput.y + right * clampedInput.x).normalized;
 
             // Angular velocity on sphere surface
             float angularSpeed = moveSpeed / orbitRadius; // radians per second
@@ -72,15 +105,34 @@ namespace SpaceCleaner.Player
 
             if (rotationAxis.sqrMagnitude < 0.001f) return;
 
-            Quaternion rotation = Quaternion.AngleAxis(angle * Mathf.Rad2Deg, rotationAxis);
+            float angleDeg = angle * Mathf.Rad2Deg;
+            Quaternion rotation = Quaternion.AngleAxis(angleDeg, rotationAxis);
             Vector3 newPos = planet.position + rotation * fromCenter;
 
             transform.position = newPos;
 
-            // Align up vector to surface normal, face movement direction
+            // Accumulate angle for shader-based planet visual rotation (safe, no transform mutation)
+            s_cumulativeAngle += angle;
+
+            // Align up vector to surface normal, turn heading at capped speed
             Vector3 newUp = (newPos - planet.position).normalized;
-            Quaternion targetRot = Quaternion.LookRotation(moveDir, newUp);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSmoothSpeed * Time.deltaTime);
+
+            // Project current forward onto tangent plane (keeps heading grounded)
+            Vector3 currentForward = Vector3.ProjectOnPlane(transform.forward, newUp).normalized;
+            if (currentForward.sqrMagnitude < 0.001f)
+                currentForward = Vector3.ProjectOnPlane(Vector3.forward, newUp).normalized;
+
+            // Project desired moveDir onto same tangent plane
+            Vector3 desiredForward = Vector3.ProjectOnPlane(moveDir, newUp).normalized;
+            if (desiredForward.sqrMagnitude < 0.001f)
+                desiredForward = currentForward;
+
+            // Rotate heading at capped angular speed — up stays locked to surface normal
+            Vector3 newForward = Vector3.RotateTowards(
+                currentForward, desiredForward,
+                turnSpeed * Mathf.Deg2Rad * Time.deltaTime, 0f);
+
+            transform.rotation = Quaternion.LookRotation(newForward, newUp);
 
             // Snap to exact radius to prevent drift
             SnapToSurface();

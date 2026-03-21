@@ -7,16 +7,16 @@ namespace SpaceCleaner.Player
     public class VacuumCollector : MonoBehaviour
     {
         [Header("Collection")]
-        [SerializeField] private float collectRadius = 5f;
+        [SerializeField] private float collectRadius = 2.5f;
         [SerializeField] private float lerpSpeed = 15f;
         [SerializeField] private LayerMask trashLayer;
 
         [Header("Vacuum VFX")]
-        [SerializeField] private Color vacuumColorStart = new Color(0.6f, 0.85f, 1f, 0.35f);
+        [SerializeField] private Color vacuumColorStart = new Color(0.6f, 0.85f, 1f, 0.15f);
         [SerializeField] private Color vacuumColorEnd   = new Color(0.4f, 0.7f, 1f, 0f);
-        [SerializeField] private int maxParticles = 25;
-        [SerializeField] private float particleSize = 0.15f;
-        [SerializeField] private float particleLifetime = 0.5f;
+        [SerializeField] private int maxParticles = 8;
+        [SerializeField] private float particleSize = 0.06f;
+        [SerializeField] private float particleLifetime = 0.8f;
 
         private static Shader s_ParticleShader;
         private static Shader s_FallbackParticleShader;
@@ -134,6 +134,23 @@ namespace SpaceCleaner.Player
 
         private void LateUpdate()
         {
+            // Validate stale count: trash destroyed/pooled may not fire OnTriggerExit
+            if (trashInRangeCount > 0)
+            {
+                bool anyNearby = false;
+                var pos = transform.position;
+                float rSq = collectRadius * collectRadius * 1.5f;
+                foreach (var trash in TrashPickup.ActiveInstances)
+                {
+                    if ((trash.transform.position - pos).sqrMagnitude <= rSq)
+                    {
+                        anyNearby = true;
+                        break;
+                    }
+                }
+                if (!anyNearby) trashInRangeCount = 0;
+            }
+
             if (trashInRangeCount > 0 && !vacuumVFX.isPlaying)
             {
                 vacuumVFX.Play();

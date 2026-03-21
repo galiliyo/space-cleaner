@@ -14,6 +14,12 @@ namespace SpaceCleaner.Core
         private static Material s_TrailMaterial;
 
         private float timer;
+        private int shooterLayer = -1;
+
+        /// <summary>
+        /// Called after spawning to prevent the projectile from hitting the entity that fired it.
+        /// </summary>
+        public void SetShooterLayer(int layer) => shooterLayer = layer;
 
         private static void EnsureSharedMaterials()
         {
@@ -72,8 +78,8 @@ namespace SpaceCleaner.Core
             // --- Trail renderer for motion visibility ---
             var trail = GetComponent<TrailRenderer>();
             if (trail == null) trail = gameObject.AddComponent<TrailRenderer>();
-            trail.time = 0.15f;
-            trail.startWidth = 0.3f;
+            trail.time = 0.4f;
+            trail.startWidth = 0.4f;
             trail.endWidth = 0f;
             trail.minVertexDistance = 0.05f;
             trail.shadowCastingMode = ShadowCastingMode.Off;
@@ -100,6 +106,7 @@ namespace SpaceCleaner.Core
         private void OnEnable()
         {
             timer = lifetime;
+            shooterLayer = -1;
 
             // Reset velocity so stale motion from a previous life doesn't carry over
             var rb = GetComponent<Rigidbody>();
@@ -127,6 +134,9 @@ namespace SpaceCleaner.Core
         private void OnTriggerEnter(Collider other)
         {
             if (((1 << other.gameObject.layer) & hitLayers) == 0) return;
+
+            // Don't hit the entity that fired us
+            if (other.gameObject.layer == shooterLayer) return;
 
             var health = other.GetComponentInParent<Health>();
             if (health != null)

@@ -18,7 +18,7 @@ GameObject:
   m_TagString: Planet
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!4 &8911701663423767999
 Transform:
@@ -30,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 100, y: 100, z: 100}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -42,7 +42,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2873505804862999164}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: d103ffa837233534daa68d733386bac5, type: 3}
 --- !u!135 &8989931646507247945
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -89,7 +89,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1800ba8bb0487534ba67da1c7a50c7ec, type: 2}
+  - {fileID: 2100000, guid: b4cd83264fcbc4e4e904a0461cd9c6a2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -123,13 +123,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a7ca3f317790c6c419d5518b4e13c1f6, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::SpaceCleaner.Core.PlanetEarth
+  externalMesh: {fileID: 4300000, guid: d103ffa837233534daa68d733386bac5, type: 3}
+  externalMaterials:
+  - {fileID: 2100000, guid: b4cd83264fcbc4e4e904a0461cd9c6a2, type: 2}
   textureSize: 512
   seed: 42
+  longitudeSegments: 64
+  latitudeSegments: 32
   deepOcean: {r: 0.05, g: 0.12, b: 0.35, a: 1}
   shallowOcean: {r: 0.1, g: 0.25, b: 0.55, a: 1}
   lowland: {r: 0.15, g: 0.45, b: 0.12, a: 1}
   highland: {r: 0.4, g: 0.35, b: 0.2, a: 1}
   mountain: {r: 0.55, g: 0.5, b: 0.4, a: 1}
   ice: {r: 0.85, g: 0.9, b: 0.95, a: 1}
+  selfRotationSpeed: 2

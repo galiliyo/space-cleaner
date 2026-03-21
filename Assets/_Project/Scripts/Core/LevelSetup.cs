@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 using SpaceCleaner.Player;
 using SpaceCleaner.Camera;
 using SpaceCleaner.Enemies;
@@ -40,19 +41,34 @@ namespace SpaceCleaner.Core
                     Debug.LogError("[LevelSetup] SphericalMovement not found on player!");
 #endif
 
-                // Initialize aiming cone
+                // Initialize aiming cone — create one if not present on the prefab
                 var aimingCone = player.GetComponentInChildren<AimingCone>();
-                if (aimingCone != null)
-                    aimingCone.SetPlanet(planet);
+                if (aimingCone == null)
+                {
+                    var coneGo = new GameObject("AimingCone");
+                    coneGo.AddComponent<MeshFilter>();
+                    coneGo.AddComponent<MeshRenderer>();
+                    coneGo.transform.SetParent(player.transform, false);
+                    aimingCone = coneGo.AddComponent<AimingCone>();
+                }
+                aimingCone.SetPlanet(planet);
 
-                // Wire aiming cone into shooting system
+                // Wire aiming cone and projectile prefab into shooting system
                 var shooting = player.GetComponent<ShootingSystem>();
                 if (shooting != null)
+                {
                     shooting.SetAimingCone(aimingCone);
+                    if (projectilePrefab != null)
+                        shooting.SetProjectilePrefab(projectilePrefab);
+                }
 
                 // Position player on top of planet
                 player.transform.position = planet.position + Vector3.up * orbitRadius;
                 player.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+
+                // Disable shadow casting on the player ship
+                foreach (var r in player.GetComponentsInChildren<Renderer>())
+                    r.shadowCastingMode = ShadowCastingMode.Off;
             }
 
             // Setup camera

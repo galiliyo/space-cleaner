@@ -47,6 +47,23 @@ namespace SpaceCleaner.Player
             playerController = GetComponent<PlayerController>();
             sphericalMovement = GetComponent<SphericalMovement>();
             burstRemaining = burstShotCount;
+
+            // Auto-create fire point if not assigned
+            if (firePoint == null)
+            {
+                var fpGo = new GameObject("FirePoint");
+                fpGo.transform.SetParent(transform, false);
+                fpGo.transform.localPosition = new Vector3(0f, 0f, 1.5f); // in front of ship
+                firePoint = fpGo.transform;
+            }
+        }
+
+        /// <summary>
+        /// Called by LevelSetup to wire the projectile prefab at runtime.
+        /// </summary>
+        public void SetProjectilePrefab(GameObject prefab)
+        {
+            projectilePrefab = prefab;
         }
 
         private void Update()
@@ -166,6 +183,11 @@ namespace SpaceCleaner.Player
             GameObject proj = pool != null
                 ? pool.Get(firePoint.position, firePoint.rotation)
                 : Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
+            // Prevent projectile from hitting the player who fired it
+            var projectile = proj.GetComponent<Projectile>();
+            if (projectile != null)
+                projectile.SetShooterLayer(gameObject.layer);
+
             var rb = proj.GetComponent<Rigidbody>();
             if (rb != null)
             {

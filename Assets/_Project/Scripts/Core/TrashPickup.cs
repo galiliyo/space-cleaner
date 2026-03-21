@@ -9,10 +9,14 @@ namespace SpaceCleaner.Core
         private static readonly List<TrashPickup> _activeInstances = new List<TrashPickup>(256);
         public static IReadOnlyList<TrashPickup> ActiveInstances => _activeInstances;
 
+        /// <summary>Max seconds a trash item can chase a collector before giving up.</summary>
+        private const float MaxCollectionTime = 4f;
+
         public bool IsBeingCollected { get; private set; }
 
         private Transform target;
         private float moveSpeed;
+        private float collectionTimer;
         private int _registryIndex = -1;
 
         public void StartCollection(Transform collector, float speed)
@@ -20,11 +24,21 @@ namespace SpaceCleaner.Core
             IsBeingCollected = true;
             target = collector;
             moveSpeed = speed;
+            collectionTimer = 0f;
         }
 
         private void Update()
         {
             if (!IsBeingCollected || target == null) return;
+
+            collectionTimer += Time.deltaTime;
+
+            // If the trash has been chasing too long, cancel so it can be re-collected
+            if (collectionTimer > MaxCollectionTime)
+            {
+                CancelCollection();
+                return;
+            }
 
             transform.position = Vector3.MoveTowards(transform.position, target.position, moveSpeed * Time.deltaTime);
 
@@ -32,6 +46,13 @@ namespace SpaceCleaner.Core
             {
                 CompleteCollection();
             }
+        }
+
+        private void CancelCollection()
+        {
+            IsBeingCollected = false;
+            target = null;
+            moveSpeed = 0f;
         }
 
         private void CompleteCollection()
@@ -56,6 +77,7 @@ namespace SpaceCleaner.Core
             IsBeingCollected = false;
             target = null;
             moveSpeed = 0f;
+            collectionTimer = 0f;
             _registryIndex = _activeInstances.Count;
             _activeInstances.Add(this);
         }

@@ -29,6 +29,18 @@ namespace SpaceCleaner.Core
         public void SetPlanet(Transform planetTransform)
         {
             planet = planetTransform;
+
+            // Position at a fixed offset (called after Awake, so planet is now valid)
+            if (planet != null)
+            {
+                float startAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                Vector3 offset = new Vector3(
+                    Mathf.Cos(startAngle) * orbitRadius,
+                    orbitRadius * 0.15f,
+                    Mathf.Sin(startAngle) * orbitRadius
+                );
+                transform.position = planet.position + offset;
+            }
         }
 
         private void Awake()
@@ -54,26 +66,11 @@ namespace SpaceCleaner.Core
             mr.sharedMaterial = moonMat;
 
             transform.localScale = Vector3.one * moonScale;
-            orbitAngle = Random.Range(0f, 360f);
         }
 
         private void Update()
         {
-            if (planet == null) return;
-
-            orbitAngle += orbitSpeed * Time.deltaTime;
-            float rad = orbitAngle * Mathf.Deg2Rad;
-
-            // Orbit in a tilted plane for visual interest
-            Vector3 offset = new Vector3(
-                Mathf.Cos(rad) * orbitRadius,
-                Mathf.Sin(rad * 0.3f) * orbitRadius * 0.2f, // slight vertical wobble
-                Mathf.Sin(rad) * orbitRadius
-            );
-
-            transform.position = planet.position + offset;
-
-            // Slow rotation on own axis
+            // Slow self-rotation only (stationary orbit)
             transform.Rotate(Vector3.up, 5f * Time.deltaTime, Space.Self);
         }
 

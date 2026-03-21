@@ -13,7 +13,7 @@ namespace SpaceCleaner.Enemies
         [SerializeField] private float orbitRadius = 52f;
 
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 20f;
+        [SerializeField] private float moveSpeed = 2.3f;
         [SerializeField] private float rotationSpeed = 5f;
 
         [Header("Vacuum")]
@@ -24,6 +24,7 @@ namespace SpaceCleaner.Enemies
         [Header("Combat")]
         [SerializeField] private float shootRange = 25f;
         [SerializeField] private float shootCooldown = 1.5f;
+        [SerializeField] private float shootInaccuracy = 4f; // degrees of random spread
         [SerializeField] private GameObject projectilePrefab;
         [SerializeField] private Transform firePoint;
         [SerializeField] private float projectileSpeed = 30f;
@@ -35,12 +36,18 @@ namespace SpaceCleaner.Enemies
         [SerializeField] private float aggressionRange = 30f;
         [SerializeField] private float aggressionHysteresis = 5f;
 
+        [Header("Collision")]
+        [SerializeField] private float minSeparation = 5f;
+        [SerializeField] private float bounceSpeed = 8f;
+
         private Health health;
         private Transform playerTransform;
+        private SphericalMovement playerMovement;
         private int collectedAmmo;
         private float shootTimer;
         private float trashSearchTimer;
         private Transform cachedNearestTrash;
+        private Vector3 bounceVelocity;
 
         private static readonly WaitForSeconds s_BlinkWait = new WaitForSeconds(0.1f);
 
@@ -60,7 +67,10 @@ namespace SpaceCleaner.Enemies
         {
             var player = FindAnyObjectByType<PlayerController>();
             if (player != null)
+            {
                 playerTransform = player.transform;
+                playerMovement = player.GetComponent<SphericalMovement>();
+            }
 
             collectedAmmo = startingAmmo;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -86,6 +96,8 @@ namespace SpaceCleaner.Enemies
                     break;
             }
 
+            HandlePlayerProximity();
+            ApplyBounceVelocity();
             SnapToSurface();
         }
 
@@ -199,11 +211,21 @@ namespace SpaceCleaner.Enemies
             shootTimer = shootCooldown;
 
             Vector3 dir = (playerTransform.position - firePoint.position).normalized;
+            dir = Quaternion.Euler(
+                Random.Range(-shootInaccuracy, shootInaccuracy),
+                Random.Range(-shootInaccuracy, shootInaccuracy),
+                0f) * dir;
+            dir.Normalize();
             Quaternion rot = Quaternion.LookRotation(dir);
             var pool = ObjectPool.GetPoolForPrefab(projectilePrefab);
             GameObject proj = pool != null
                 ? pool.Get(firePoint.position, rot)
                 : Instantiate(projectilePrefab, firePoint.position, rot);
+            // Prevent projectile from hitting the AI who fired it
+            var projectile = proj.GetComponent<Projectile>();
+            if (projectile != null)
+                projectile.SetShooterLayer(gameObject.layer);
+
             var rb = proj.GetComponent<Rigidbody>();
             if (rb != null)
                 rb.linearVelocity = dir * projectileSpeed;
@@ -214,6 +236,44 @@ namespace SpaceCleaner.Enemies
             if (planet == null) return;
             Vector3 dir = (transform.position - planet.position).normalized;
             transform.position = planet.position + dir * orbitRadius;
+        }
+
+        private void HandlePlayerProximity()
+        {
+            if (playerTransform == null || planet == null) return;
+            float dist = Vector3.Distance(transform.position, playerTransform.position);
+            if (dist >= minSeparation || dist < 0.01f) return;
+
+            Vector3 up = (transform.position - planet.position).normalized;
+            Vector3 away = Vector3.ProjectOnPlane(transform.position - playerTransform.position, up).normalized;
+            if (away.sqrMagnitude < 0.001f) return;
+
+            float overlap = minSeparation - dist;
+            transform.position += away * (overlap * 0.5f);
+            SnapToSurface();
+
+            bounceVelocity = away * bounceSpeed;
+            if (playerMovement != null)
+                playerMovement.ApplyBounce(-away, bounceSpeed);
+        }
+
+        private void ApplyBounceVelocity()
+        {
+            if (bounceVelocity.sqrMagnitude <= 0.001f) return;
+            if (planet == null) return;
+
+            Vector3 up = (transform.position - planet.position).normalized;
+            Vector3 bDir = Vector3.ProjectOnPlane(bounceVelocity, up).normalized;
+            float angSpeed = bounceVelocity.magnitude / orbitRadius;
+            float angle = angSpeed * Time.deltaTime;
+            Vector3 fromCenter = transform.position - planet.position;
+            Vector3 rotAxis = Vector3.Cross(fromCenter.normalized, bDir).normalized;
+            if (rotAxis.sqrMagnitude > 0.001f)
+            {
+                Quaternion rot = Quaternion.AngleAxis(angle * Mathf.Rad2Deg, rotAxis);
+                transform.position = planet.position + rot * fromCenter;
+            }
+            bounceVelocity = Vector3.MoveTowards(bounceVelocity, Vector3.zero, 6f * Time.deltaTime);
         }
 
         private void OnTriggerEnter(Collider other)

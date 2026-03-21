@@ -3,6 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using SpaceCleaner.Core;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using SpaceCleaner.Player;
 
 namespace SpaceCleaner.UI
@@ -93,6 +96,10 @@ namespace SpaceCleaner.UI
             if (playerHealthBar == null)
                 CreatePlayerHealthBar();
 
+            // Build cleanup bar programmatically if not assigned
+            if (cleanupBar == null)
+                CreateCleanupBar();
+
             // Initialize displays
             UpdateAmmoDisplay(player != null ? player.AmmoCount : 0);
             UpdateCleanupDisplay(0f);
@@ -134,6 +141,57 @@ namespace SpaceCleaner.UI
         }
 
         /// <summary>
+        /// Assigns the SpaceCleaner_Actions asset to an InputSystemUIInputModule so that
+        /// Point/Click actions are wired and pointer events actually reach UI elements.
+        /// Without this, AddComponent&lt;InputSystemUIInputModule&gt;() at runtime leaves
+        /// actionsAsset null and NO pointer events are dispatched.
+        /// </summary>
+        private static void ConfigureInputModule(InputSystemUIInputModule module)
+        {
+            InputActionAsset actionsAsset = null;
+
+            // Search all loaded InputActionAssets for the SpaceCleaner one
+            // (loaded because the PlayerController prefab references it)
+            var allAssets = Resources.FindObjectsOfTypeAll<InputActionAsset>();
+            foreach (var asset in allAssets)
+            {
+                if (asset.name.Contains("SpaceCleaner"))
+                {
+                    actionsAsset = asset;
+                    break;
+                }
+            }
+
+#if UNITY_EDITOR
+            // In editor, load directly via AssetDatabase as a fallback
+            if (actionsAsset == null)
+            {
+                actionsAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<InputActionAsset>(
+                    "Assets/_Project/Input/SpaceCleaner_Actions.inputactions");
+            }
+#endif
+
+            if (actionsAsset != null)
+            {
+                // CRITICAL: Use a runtime clone so the UI module's action lifecycle is
+                // independent of PlayerController's inputActions.Enable()/Disable() calls.
+                // Sharing the same instance means OnDisable on the player kills UI input.
+                var uiClone = Object.Instantiate(actionsAsset);
+                uiClone.name = actionsAsset.name + "_UI";
+                module.actionsAsset = uiClone;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log($"[GameplayHUD] Configured InputSystemUIInputModule with cloned {actionsAsset.name}.");
+#endif
+            }
+            else
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.LogWarning("[GameplayHUD] Could not find SpaceCleaner_Actions — UI pointer events may not work.");
+#endif
+            }
+        }
+
+        /// <summary>
         /// Determines whether touch controls should be shown.
         /// Returns true on mobile platforms, or in the Editor for testing.
         /// </summary>
@@ -155,7 +213,8 @@ namespace SpaceCleaner.UI
         /// </summary>
         private void SetupTouchControls()
         {
-            var canvasRT = GetComponentInParent<Canvas>()?.GetComponent<RectTransform>();
+            var canvas = GetComponentInParent<Canvas>();
+            var canvasRT = canvas?.GetComponent<RectTransform>();
             if (canvasRT == null)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -163,6 +222,41 @@ namespace SpaceCleaner.UI
 #endif
                 return;
             }
+
+            // Ensure EventSystem exists with a working InputSystemUIInputModule
+            var eventSystem = FindAnyObjectByType<EventSystem>();
+            if (eventSystem == null)
+            {
+                var esGo = new GameObject("EventSystem");
+                esGo.AddComponent<EventSystem>();
+                var newModule = esGo.AddComponent<InputSystemUIInputModule>();
+                ConfigureInputModule(newModule);
+            }
+            else
+            {
+                // Replace any broken module (null actionsAsset = broken YAML ref or unconfigured)
+                var existingModule = eventSystem.GetComponent<InputSystemUIInputModule>();
+                if (existingModule == null)
+                {
+                    var newModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+                    ConfigureInputModule(newModule);
+                }
+                else if (existingModule.actionsAsset == null)
+                {
+                    // DestroyImmediate avoids the two-module race condition that Destroy() causes
+#if UNITY_EDITOR
+                    DestroyImmediate(existingModule);
+#else
+                    Destroy(existingModule);
+#endif
+                    var newModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+                    ConfigureInputModule(newModule);
+                }
+            }
+
+            // Ensure Canvas has GraphicRaycaster for UI hit detection
+            if (canvas.GetComponent<GraphicRaycaster>() == null)
+                canvas.gameObject.AddComponent<GraphicRaycaster>();
 
             // Use this transform as parent so controls are grouped under the HUD
             var parentRT = GetComponent<RectTransform>() ?? canvasRT;
@@ -447,7 +541,7 @@ namespace SpaceCleaner.UI
                 playerHealthBar.value = max > 0 ? (float)current / max : 0f;
 
             if (playerHealthText != null)
-                playerHealthText.text = $"HP: {current}/{max}";
+                playerHealthText.text = $"{current}/{max}";
         }
 
         private void HandleOpponentStateChanged(bool alive)
@@ -498,26 +592,50 @@ namespace SpaceCleaner.UI
 
         private void CreatePlayerHealthBar()
         {
-            var canvasRT = GetComponentInParent<Canvas>()?.GetComponent<RectTransform>();
-            if (canvasRT == null) return;
+            var parentRT = GetComponent<RectTransform>();
+            if (parentRT == null) return;
 
-            var parentRT = GetComponent<RectTransform>() ?? canvasRT;
+            // Container with dark border
+            var containerGO = new GameObject("PlayerHealthContainer");
+            var containerRT = containerGO.AddComponent<RectTransform>();
+            containerRT.SetParent(parentRT, false);
+            containerRT.anchorMin = new Vector2(0f, 1f);
+            containerRT.anchorMax = new Vector2(0f, 1f);
+            containerRT.pivot = new Vector2(0f, 1f);
+            containerRT.anchoredPosition = new Vector2(10f, -10f);
+            containerRT.sizeDelta = new Vector2(220f, 28f);
 
-            // Root object for the health bar
+            var borderImage = containerGO.AddComponent<Image>();
+            borderImage.color = new Color(0.12f, 0.12f, 0.18f, 0.92f);
+
+            // "HP" label
+            var labelGO = new GameObject("Label");
+            var labelRT = labelGO.AddComponent<RectTransform>();
+            labelRT.SetParent(containerRT, false);
+            labelRT.anchorMin = new Vector2(0f, 0f);
+            labelRT.anchorMax = new Vector2(0f, 1f);
+            labelRT.pivot = new Vector2(0f, 0.5f);
+            labelRT.anchoredPosition = new Vector2(6f, 0f);
+            labelRT.sizeDelta = new Vector2(30f, 0f);
+            var labelTMP = labelGO.AddComponent<TextMeshProUGUI>();
+            labelTMP.text = "HP";
+            labelTMP.fontSize = 12f;
+            labelTMP.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+            labelTMP.alignment = TextAlignmentOptions.Left;
+            labelTMP.fontStyle = FontStyles.Bold;
+
+            // Slider (inside container, right of label)
             var barGO = new GameObject("PlayerHealthBar");
             var barRT = barGO.AddComponent<RectTransform>();
-            barRT.SetParent(parentRT, false);
-            barRT.anchorMin = new Vector2(0f, 1f);
-            barRT.anchorMax = new Vector2(0f, 1f);
-            barRT.pivot = new Vector2(0f, 1f);
-            barRT.anchoredPosition = new Vector2(10f, -10f);
-            barRT.sizeDelta = new Vector2(200f, 20f);
+            barRT.SetParent(containerRT, false);
+            barRT.anchorMin = Vector2.zero;
+            barRT.anchorMax = Vector2.one;
+            barRT.offsetMin = new Vector2(34f, 3f);
+            barRT.offsetMax = new Vector2(-3f, -3f);
 
-            // Slider component
             playerHealthBar = barGO.AddComponent<Slider>();
             playerHealthBar.minValue = 0f;
             playerHealthBar.maxValue = 1f;
-            playerHealthBar.wholeNumbers = false;
             playerHealthBar.interactable = false;
 
             // Background
@@ -527,8 +645,8 @@ namespace SpaceCleaner.UI
             bgRT.anchorMin = Vector2.zero;
             bgRT.anchorMax = Vector2.one;
             bgRT.sizeDelta = Vector2.zero;
-            var bgImage = bgGO.AddComponent<Image>();
-            bgImage.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+            var bgImg = bgGO.AddComponent<Image>();
+            bgImg.color = new Color(0.3f, 0.1f, 0.1f, 0.8f);
 
             // Fill area
             var fillAreaGO = new GameObject("Fill Area");
@@ -538,7 +656,6 @@ namespace SpaceCleaner.UI
             fillAreaRT.anchorMax = Vector2.one;
             fillAreaRT.sizeDelta = Vector2.zero;
 
-            // Fill
             var fillGO = new GameObject("Fill");
             var fillRT = fillGO.AddComponent<RectTransform>();
             fillRT.SetParent(fillAreaRT, false);
@@ -546,26 +663,117 @@ namespace SpaceCleaner.UI
             fillRT.anchorMax = Vector2.one;
             fillRT.sizeDelta = Vector2.zero;
             var fillImage = fillGO.AddComponent<Image>();
-            fillImage.color = new Color(0.2f, 0.9f, 0.2f, 1f); // Green
+            fillImage.color = new Color(0.1f, 0.85f, 0.2f, 1f);
 
             playerHealthBar.fillRect = fillRT;
-            playerHealthBar.targetGraphic = fillImage;
 
-            // Health text
+            // HP text overlaid on the bar
             var textGO = new GameObject("PlayerHealthText");
             var textRT = textGO.AddComponent<RectTransform>();
-            textRT.SetParent(parentRT, false);
-            textRT.anchorMin = new Vector2(0f, 1f);
-            textRT.anchorMax = new Vector2(0f, 1f);
-            textRT.pivot = new Vector2(0f, 1f);
-            textRT.anchoredPosition = new Vector2(215f, -10f);
-            textRT.sizeDelta = new Vector2(120f, 20f);
+            textRT.SetParent(containerRT, false);
+            textRT.anchorMin = Vector2.zero;
+            textRT.anchorMax = Vector2.one;
+            textRT.sizeDelta = Vector2.zero;
+            textRT.anchoredPosition = new Vector2(14f, 0f);
 
             playerHealthText = textGO.AddComponent<TextMeshProUGUI>();
-            playerHealthText.fontSize = 14f;
+            playerHealthText.fontSize = 12f;
             playerHealthText.color = Color.white;
-            playerHealthText.alignment = TextAlignmentOptions.MidlineLeft;
-            playerHealthText.text = "HP: 0/0";
+            playerHealthText.alignment = TextAlignmentOptions.Center;
+            playerHealthText.text = "0/0";
+        }
+
+        private void CreateCleanupBar()
+        {
+            var parentRT = GetComponent<RectTransform>();
+            if (parentRT == null) return;
+
+            // Container with dark border
+            var containerGO = new GameObject("CleanupContainer");
+            var containerRT = containerGO.AddComponent<RectTransform>();
+            containerRT.SetParent(parentRT, false);
+            containerRT.anchorMin = new Vector2(0.5f, 1f);
+            containerRT.anchorMax = new Vector2(0.5f, 1f);
+            containerRT.pivot = new Vector2(0.5f, 1f);
+            containerRT.anchoredPosition = new Vector2(0f, -10f);
+            containerRT.sizeDelta = new Vector2(260f, 28f);
+
+            var borderImage = containerGO.AddComponent<Image>();
+            borderImage.color = new Color(0.12f, 0.12f, 0.18f, 0.92f);
+
+            // "CLEAN" label
+            var labelGO = new GameObject("Label");
+            var labelRT = labelGO.AddComponent<RectTransform>();
+            labelRT.SetParent(containerRT, false);
+            labelRT.anchorMin = new Vector2(0f, 0f);
+            labelRT.anchorMax = new Vector2(0f, 1f);
+            labelRT.pivot = new Vector2(0f, 0.5f);
+            labelRT.anchoredPosition = new Vector2(6f, 0f);
+            labelRT.sizeDelta = new Vector2(48f, 0f);
+            var labelTMP = labelGO.AddComponent<TextMeshProUGUI>();
+            labelTMP.text = "CLEAN";
+            labelTMP.fontSize = 11f;
+            labelTMP.color = new Color(0.7f, 0.85f, 1f, 1f);
+            labelTMP.alignment = TextAlignmentOptions.Left;
+            labelTMP.fontStyle = FontStyles.Bold;
+
+            // Slider
+            var barGO = new GameObject("CleanupBar");
+            var barRT = barGO.AddComponent<RectTransform>();
+            barRT.SetParent(containerRT, false);
+            barRT.anchorMin = Vector2.zero;
+            barRT.anchorMax = Vector2.one;
+            barRT.offsetMin = new Vector2(50f, 3f);
+            barRT.offsetMax = new Vector2(-3f, -3f);
+
+            cleanupBar = barGO.AddComponent<Slider>();
+            cleanupBar.minValue = 0f;
+            cleanupBar.maxValue = 1f;
+            cleanupBar.interactable = false;
+
+            // Background
+            var bgGO = new GameObject("Background");
+            var bgRT = bgGO.AddComponent<RectTransform>();
+            bgRT.SetParent(barRT, false);
+            bgRT.anchorMin = Vector2.zero;
+            bgRT.anchorMax = Vector2.one;
+            bgRT.sizeDelta = Vector2.zero;
+            var bgImg = bgGO.AddComponent<Image>();
+            bgImg.color = new Color(0.08f, 0.08f, 0.18f, 0.8f);
+
+            // Fill area
+            var fillAreaGO = new GameObject("Fill Area");
+            var fillAreaRT = fillAreaGO.AddComponent<RectTransform>();
+            fillAreaRT.SetParent(barRT, false);
+            fillAreaRT.anchorMin = Vector2.zero;
+            fillAreaRT.anchorMax = Vector2.one;
+            fillAreaRT.sizeDelta = Vector2.zero;
+
+            var fillGO = new GameObject("Fill");
+            var fillRT = fillGO.AddComponent<RectTransform>();
+            fillRT.SetParent(fillAreaRT, false);
+            fillRT.anchorMin = Vector2.zero;
+            fillRT.anchorMax = Vector2.one;
+            fillRT.sizeDelta = Vector2.zero;
+            var fillImage = fillGO.AddComponent<Image>();
+            fillImage.color = new Color(0.2f, 0.7f, 1f, 1f);
+
+            cleanupBar.fillRect = fillRT;
+
+            // Percentage text overlaid
+            var textGO = new GameObject("CleanupPercentText");
+            var textRT = textGO.AddComponent<RectTransform>();
+            textRT.SetParent(containerRT, false);
+            textRT.anchorMin = Vector2.zero;
+            textRT.anchorMax = Vector2.one;
+            textRT.sizeDelta = Vector2.zero;
+            textRT.anchoredPosition = new Vector2(18f, 0f);
+
+            cleanupPercentText = textGO.AddComponent<TextMeshProUGUI>();
+            cleanupPercentText.fontSize = 12f;
+            cleanupPercentText.color = Color.white;
+            cleanupPercentText.alignment = TextAlignmentOptions.Center;
+            cleanupPercentText.text = "0%";
         }
 
         private void CreateOpponentDefeatedPanel()

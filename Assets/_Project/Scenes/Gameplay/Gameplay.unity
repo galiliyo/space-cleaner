@@ -131,6 +131,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Planet
       objectReference: {fileID: 0}
+    - target: {fileID: 6407169178792743492, guid: 619a48613349a5542a3d92af396b310c, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: b4cd83264fcbc4e4e904a0461cd9c6a2, type: 2}
     - target: {fileID: 8911701663423767999, guid: 619a48613349a5542a3d92af396b310c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -184,6 +188,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 204754905663281041, guid: f06ad6f9174c7634292485b7e1921745, type: 3}
+      propertyPath: moveSpeed
+      value: 2.7
+      objectReference: {fileID: 0}
     - target: {fileID: 1632043087218348050, guid: f06ad6f9174c7634292485b7e1921745, type: 3}
       propertyPath: trashLayer.m_Bits
       value: 256
@@ -1781,6 +1789,7 @@ MonoBehaviour:
   totalTrashCount: 0
   collectedTrashCount: 0
   opponentAlive: 1
+  cleanupThreshold: 0.8
 --- !u!4 &2036008655
 Transform:
   m_ObjectHideFlags: 0

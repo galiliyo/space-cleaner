@@ -7,7 +7,9 @@ using UnityEngine.UI;
 namespace SpaceCleaner.UI
 {
     /// <summary>
-    /// Brawl Stars-style virtual joystick: dark base ring with bright colored knob.
+    /// Virtual joystick with a full-size transparent touch area.
+    /// The base stays fixed and receives all pointer events; the handle (knob) is a
+    /// child that slides within it on drag.
     /// </summary>
     [AddComponentMenu("Input/Virtual Joystick")]
     public class VirtualJoystick : OnScreenControl, IPointerDownHandler, IPointerUpHandler, IDragHandler
@@ -21,19 +23,15 @@ namespace SpaceCleaner.UI
         [SerializeField] private Color backgroundColor = new Color(0.1f, 0.1f, 0.15f, 0.55f);
         [SerializeField] private Color borderColor = new Color(0.3f, 0.6f, 0.9f, 0.4f);
         [SerializeField] private Color handleColor = new Color(0.3f, 0.7f, 1f, 0.9f);
-        [SerializeField] private Color handleHighlight = new Color(0.5f, 0.85f, 1f, 0.95f);
 
         [InputControl(layout = "Vector2")]
         [SerializeField]
         private string m_ControlPath;
 
+        private RectTransform baseRT;
         private RectTransform handleRect;
         private RectTransform backgroundRect;
         private RectTransform borderRect;
-        private Image backgroundImage;
-        private Image borderImage;
-        private Image handleImage;
-        private Vector2 startPos;
         private Canvas parentCanvas;
         private UnityEngine.Camera canvasCamera;
 
@@ -47,20 +45,26 @@ namespace SpaceCleaner.UI
 
         private void Start()
         {
-            handleRect = GetComponent<RectTransform>();
-
+            baseRT = GetComponent<RectTransform>();
             parentCanvas = GetComponentInParent<Canvas>();
             if (parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
                 canvasCamera = parentCanvas.worldCamera;
 
             EnsureVisuals();
-            startPos = handleRect.anchoredPosition;
         }
 
         public void EnsureVisuals()
         {
-            if (handleRect == null)
-                handleRect = GetComponent<RectTransform>();
+            if (baseRT == null) baseRT = GetComponent<RectTransform>();
+
+            // Base covers the full touch area
+            baseRT.sizeDelta = new Vector2(backgroundRadius * 2f, backgroundRadius * 2f);
+
+            // Base image: transparent but catches all pointer events in the area
+            var baseImage = GetComponent<Image>();
+            if (baseImage == null) baseImage = gameObject.AddComponent<Image>();
+            baseImage.color = new Color(0, 0, 0, 0);
+            baseImage.raycastTarget = true;
 
             // --- Outer border ring ---
             if (borderRect == null)
@@ -69,14 +73,13 @@ namespace SpaceCleaner.UI
                 if (existing != null)
                 {
                     borderRect = existing.GetComponent<RectTransform>();
-                    borderImage = existing.GetComponent<Image>();
                 }
                 else
                 {
                     var borderGo = new GameObject("JoystickBorder", typeof(RectTransform), typeof(Image));
                     borderGo.transform.SetParent(transform, false);
                     borderRect = borderGo.GetComponent<RectTransform>();
-                    borderImage = borderGo.GetComponent<Image>();
+                    var borderImage = borderGo.GetComponent<Image>();
 
                     float borderSize = (backgroundRadius + 3f) * 2f;
                     borderRect.anchoredPosition = Vector2.zero;
@@ -96,42 +99,53 @@ namespace SpaceCleaner.UI
                 if (existing != null)
                 {
                     backgroundRect = existing.GetComponent<RectTransform>();
-                    backgroundImage = existing.GetComponent<Image>();
                 }
                 else
                 {
                     var bgGo = new GameObject("JoystickBackground", typeof(RectTransform), typeof(Image));
                     bgGo.transform.SetParent(transform, false);
                     backgroundRect = bgGo.GetComponent<RectTransform>();
-                    backgroundImage = bgGo.GetComponent<Image>();
+                    var bgImage = bgGo.GetComponent<Image>();
 
                     backgroundRect.anchoredPosition = Vector2.zero;
                     backgroundRect.sizeDelta = new Vector2(backgroundRadius * 2f, backgroundRadius * 2f);
 
-                    backgroundImage.color = backgroundColor;
-                    backgroundImage.raycastTarget = false;
-                    backgroundImage.sprite = CreateCircleSprite();
-                    backgroundImage.type = Image.Type.Simple;
+                    bgImage.color = backgroundColor;
+                    bgImage.raycastTarget = false;
+                    bgImage.sprite = CreateCircleSprite();
+                    bgImage.type = Image.Type.Simple;
                 }
             }
 
-            // --- Handle knob (bright colored circle with gradient) ---
-            handleImage = GetComponent<Image>();
-            if (handleImage == null)
-                handleImage = gameObject.AddComponent<Image>();
+            // --- Handle knob (child that moves on drag) ---
+            if (handleRect == null)
+            {
+                var existing = transform.Find("JoystickHandle");
+                if (existing != null)
+                {
+                    handleRect = existing.GetComponent<RectTransform>();
+                }
+                else
+                {
+                    var handleGo = new GameObject("JoystickHandle", typeof(RectTransform), typeof(Image));
+                    handleGo.transform.SetParent(transform, false);
+                    handleRect = handleGo.GetComponent<RectTransform>();
+                    var handleImage = handleGo.GetComponent<Image>();
 
-            handleImage.color = handleColor;
-            handleImage.sprite = CreateGradientCircleSprite();
-            handleImage.type = Image.Type.Simple;
-            handleImage.raycastTarget = true;
+                    handleRect.anchoredPosition = Vector2.zero;
+                    handleRect.sizeDelta = new Vector2(handleRadius * 2f, handleRadius * 2f);
 
-            handleRect.sizeDelta = new Vector2(handleRadius * 2f, handleRadius * 2f);
+                    handleImage.color = handleColor;
+                    handleImage.sprite = CreateGradientCircleSprite();
+                    handleImage.type = Image.Type.Simple;
+                    handleImage.raycastTarget = false;
+                }
+            }
 
             // Z-order: border behind bg behind handle
-            if (borderRect != null)
-                borderRect.SetAsFirstSibling();
-            if (backgroundRect != null)
-                backgroundRect.SetSiblingIndex(1);
+            if (borderRect != null) borderRect.SetAsFirstSibling();
+            if (backgroundRect != null) backgroundRect.SetSiblingIndex(1);
+            if (handleRect != null) handleRect.SetAsLastSibling();
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -141,28 +155,26 @@ namespace SpaceCleaner.UI
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (handleRect == null) return;
+            if (handleRect == null || baseRT == null) return;
 
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                transform.parent as RectTransform,
+                baseRT,
                 eventData.position,
                 canvasCamera,
                 out Vector2 localPoint
             );
 
-            Vector2 delta = localPoint - startPos;
-            delta = Vector2.ClampMagnitude(delta, movementRange);
+            localPoint = Vector2.ClampMagnitude(localPoint, movementRange);
+            handleRect.anchoredPosition = localPoint;
 
-            handleRect.anchoredPosition = startPos + delta;
-
-            Direction = delta / movementRange;
+            Direction = localPoint / movementRange;
             SendValueToControl(Direction);
         }
 
         public void OnPointerUp(PointerEventData eventData)
         {
             if (handleRect != null)
-                handleRect.anchoredPosition = startPos;
+                handleRect.anchoredPosition = Vector2.zero;
 
             Direction = Vector2.zero;
             SendValueToControl(Vector2.zero);
@@ -277,9 +289,7 @@ namespace SpaceCleaner.UI
                     if (dist <= radius)
                     {
                         float t = dist / radius;
-                        // Radial gradient: bright center, slightly darker edge
                         byte brightness = (byte)(255 - (int)(t * 80));
-                        // Slight highlight toward top-left (fake 3D)
                         float highlight = Mathf.Clamp01(1f - ((dx + dy) / radius + 1f) * 0.3f);
                         brightness = (byte)Mathf.Min(255, brightness + (int)(highlight * 30));
 
@@ -312,7 +322,6 @@ namespace SpaceCleaner.UI
             rt.anchorMax = new Vector2(0f, 0f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = anchorPosition;
-            rt.sizeDelta = new Vector2(60f, 60f);
 
             var joystick = go.AddComponent<VirtualJoystick>();
             joystick.m_ControlPath = controlPath;

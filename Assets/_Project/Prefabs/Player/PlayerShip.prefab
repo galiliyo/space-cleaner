@@ -152,8 +152,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38546dd01f9f03c4f80f3b76b5bfeeaf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpaceCleaner.Player.PlayerController
-  inputActions: {fileID: 0}
-  ammoCount: 0
+  inputActions: {fileID: 11400000, guid: b0d63db8453e76740a6904bb7659b187, type: 2}
+  ammoCount: 5
   softCap: 50
   overflowDecayRate: 2
 --- !u!114 &9135014707536871340

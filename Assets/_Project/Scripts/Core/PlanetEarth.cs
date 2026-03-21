@@ -1,22 +1,32 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using SpaceCleaner.Player;
 
 namespace SpaceCleaner.Core
 {
     /// <summary>
-    /// Generates a high-resolution UV sphere mesh and procedural Earth texture at runtime.
-    /// Replaces Unity's low-poly primitive sphere with a smooth ~4K triangle sphere.
+    /// Displays Earth as the gameplay planet. Supports three modes (in priority order):
+    /// 1. External mesh + materials (e.g. "Planet Earth Free" asset from the Asset Store)
+    /// 2. Custom StylizedEarth shader material already assigned in the Inspector
+    /// 3. Fully procedural UV sphere with generated texture (fallback)
     /// </summary>
     public class PlanetEarth : MonoBehaviour
     {
+        [Header("External Model (e.g. Planet Earth Free)")]
+        [Tooltip("Drag the Earth .fbx mesh here. When set, skips procedural sphere generation.")]
+        [SerializeField] private Mesh externalMesh;
+        [Tooltip("Materials for the external model. Leave empty to keep existing materials.")]
+        [SerializeField] private Material[] externalMaterials;
+
+        [Header("Procedural Fallback")]
         [SerializeField] private int textureSize = 512;
         [SerializeField] private int seed = 42;
 
-        [Header("Sphere Resolution")]
+        [Header("Sphere Resolution (procedural only)")]
         [SerializeField] private int longitudeSegments = 64;
         [SerializeField] private int latitudeSegments = 32;
 
-        [Header("Colors")]
+        [Header("Colors (procedural only)")]
         [SerializeField] private Color deepOcean = new Color(0.05f, 0.12f, 0.35f);
         [SerializeField] private Color shallowOcean = new Color(0.1f, 0.25f, 0.55f);
         [SerializeField] private Color lowland = new Color(0.15f, 0.45f, 0.12f);
@@ -24,47 +34,103 @@ namespace SpaceCleaner.Core
         [SerializeField] private Color mountain = new Color(0.55f, 0.5f, 0.4f);
         [SerializeField] private Color ice = new Color(0.85f, 0.9f, 0.95f);
 
+        [Header("Rotation")]
+        [Tooltip("Continuous self-rotation speed in degrees/sec (visual only, for external models).")]
+        [SerializeField] private float selfRotationSpeed = 0f;
+
         private Material planetMat;
         private Texture2D planetTex;
         private Mesh sphereMesh;
+        private Material activeMaterial; // whichever material is actually on the renderer
+        private bool useShaderRotation; // true when StylizedEarth shader is active
+        private static readonly int RotYId = Shader.PropertyToID("_RotY");
 
         private void Awake()
         {
-#if UNITY_ANDROID || UNITY_IOS
-            longitudeSegments = Mathf.Min(longitudeSegments, 48);
-            latitudeSegments = Mathf.Min(latitudeSegments, 24);
-            textureSize = Mathf.Min(textureSize, 256);
-#endif
-            // Generate high-res sphere mesh
-            sphereMesh = GenerateUVSphere(longitudeSegments, latitudeSegments);
             var mf = GetComponent<MeshFilter>();
-            if (mf != null) mf.sharedMesh = sphereMesh;
+            var mr = GetComponent<MeshRenderer>();
 
-            // Update collider to match new mesh
-            var sc = GetComponent<SphereCollider>();
-            if (sc != null)
+            // --- Mode 1: External mesh (e.g. Planet Earth Free) ---
+            if (externalMesh != null)
             {
-                sc.center = Vector3.zero;
-                sc.radius = 0.5f;
+                if (mf != null) mf.sharedMesh = externalMesh;
+
+                if (externalMaterials != null && externalMaterials.Length > 0 && mr != null)
+                    mr.sharedMaterials = externalMaterials;
+
+                // Update collider to match external mesh bounds
+                var sc = GetComponent<SphereCollider>();
+                if (sc != null)
+                {
+                    var ext = externalMesh.bounds.extents;
+                    sc.center = externalMesh.bounds.center;
+                    sc.radius = Mathf.Max(ext.x, Mathf.Max(ext.y, ext.z));
+                }
+
+                useShaderRotation = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log($"[PlanetEarth] Using external mesh: {externalMesh.name}");
+#endif
+            }
+            else
+            {
+                // --- Mode 2 & 3: Procedural sphere ---
+#if UNITY_ANDROID || UNITY_IOS
+                longitudeSegments = Mathf.Min(longitudeSegments, 48);
+                latitudeSegments = Mathf.Min(latitudeSegments, 24);
+                textureSize = Mathf.Min(textureSize, 256);
+#endif
+                sphereMesh = GenerateUVSphere(longitudeSegments, latitudeSegments);
+                if (mf != null) mf.sharedMesh = sphereMesh;
+
+                var sc = GetComponent<SphereCollider>();
+                if (sc != null)
+                {
+                    sc.center = Vector3.zero;
+                    sc.radius = 0.5f;
+                }
+
+                // If a material is already assigned (e.g. StylizedEarth shader), keep it
+                bool hasCustomMaterial = mr != null && mr.sharedMaterial != null
+                    && mr.sharedMaterial.name != "Default-Material"
+                    && !mr.sharedMaterial.name.StartsWith("Default");
+
+                if (!hasCustomMaterial)
+                {
+                    planetTex = GenerateEarthTexture();
+                    var shader = Shader.Find("Universal Render Pipeline/Lit");
+                    planetMat = new Material(shader);
+                    planetMat.SetTexture("_BaseMap", planetTex);
+                    planetMat.SetColor("_BaseColor", Color.white);
+                    planetMat.SetFloat("_Smoothness", 0.3f);
+                    planetMat.SetFloat("_Metallic", 0f);
+                    if (mr != null) mr.sharedMaterial = planetMat;
+                }
+
+                useShaderRotation = true;
             }
 
-            // Generate texture and material
-            planetTex = GenerateEarthTexture();
-
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
-            planetMat = new Material(shader);
-            planetMat.SetTexture("_BaseMap", planetTex);
-            planetMat.SetColor("_BaseColor", Color.white);
-            planetMat.SetFloat("_Smoothness", 0.3f);
-            planetMat.SetFloat("_Metallic", 0f);
-
             // Disable shadow casting on planet (ship shadows look bad on curved surface)
-            var mr = GetComponent<MeshRenderer>();
             if (mr != null)
             {
-                mr.sharedMaterial = planetMat;
                 mr.receiveShadows = false;
                 mr.shadowCastingMode = ShadowCastingMode.Off;
+                activeMaterial = mr.material;
+            }
+        }
+
+        private void Update()
+        {
+            if (useShaderRotation)
+            {
+                // Feed ship movement angle to shader for visual planet rotation
+                if (activeMaterial != null && activeMaterial.HasFloat(RotYId))
+                    activeMaterial.SetFloat(RotYId, SphericalMovement.CumulativeAngle);
+            }
+            else if (selfRotationSpeed > 0f)
+            {
+                // Slow visual spin for external models (rotate the mesh, not the collider)
+                transform.Rotate(Vector3.up, selfRotationSpeed * Time.deltaTime, Space.Self);
             }
         }
 
