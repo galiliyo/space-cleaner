@@ -34,6 +34,24 @@ namespace SpaceCleaner.Camera
             planet = planetTransform;
         }
 
+        /// <summary>
+        /// Zeroes smoothing velocity and snaps the camera to the correct position
+        /// immediately. Call after teleporting the target (e.g. respawn).
+        /// </summary>
+        public void SnapImmediate()
+        {
+            smoothVelocity = Vector3.zero;
+            if (target == null || planet == null) return;
+
+            Vector3 up = (target.position - planet.position).normalized;
+            Vector3 back = -target.forward;
+            float elevRad = elevation * Mathf.Deg2Rad;
+            transform.position = target.position
+                + up * (distance * Mathf.Sin(elevRad))
+                + back * (distance * Mathf.Cos(elevRad));
+            transform.LookAt(target.position, up);
+        }
+
         private void Start()
         {
 #if UNITY_ANDROID || UNITY_IOS

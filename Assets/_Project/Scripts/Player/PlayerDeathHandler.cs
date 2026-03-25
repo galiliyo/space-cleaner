@@ -146,6 +146,11 @@ namespace SpaceCleaner.Player
             if (deathOverlay == null)
                 deathOverlay = CreateDeathOverlay();
 
+            // Re-enable death canvas in case it was disabled from a previous respawn
+            var deathCanvas = deathOverlay.GetComponentInParent<Canvas>();
+            if (deathCanvas != null)
+                deathCanvas.gameObject.SetActive(true);
+
             // Pause gameplay behind overlay
             GameManager.Instance?.PauseGame();
 
@@ -155,14 +160,24 @@ namespace SpaceCleaner.Player
         /// <summary>Called by DeathOverlayUI when player taps Retry.</summary>
         public void OnRetry()
         {
+            if (!isDying) return; // guard against stale clicks
             PlayClip(retryClickClip);
+            isDying = false; // prevent double-tap from starting two respawn sequences
             StartCoroutine(RespawnSequence());
         }
 
         private IEnumerator RespawnSequence()
         {
-            // 1. Fade out overlay
-            yield return deathOverlay.FadeOut(0.3f);
+            // 1. Fade out overlay (run the fade on THIS object to avoid self-deactivation issues)
+            if (deathOverlay != null)
+            {
+                yield return deathOverlay.FadeOut(0.3f);
+                // Deactivate the entire death canvas — the overlay already set its own GO inactive,
+                // but the parent canvas with its GraphicRaycaster should also be disabled
+                var deathCanvas = deathOverlay.GetComponentInParent<Canvas>();
+                if (deathCanvas != null)
+                    deathCanvas.gameObject.SetActive(false);
+            }
 
             // 2. Reset player state
             health.Revive();
@@ -183,7 +198,14 @@ namespace SpaceCleaner.Player
             movement.enabled = true;
             GameManager.Instance?.ResumeGame();
 
-            // 4. Drop-in animation
+            // 4. Snap camera to player before drop-in so it doesn't fly in from space
+            if (sphericalCamera != null)
+            {
+                sphericalCamera.SetTarget(transform, movement.Planet);
+                sphericalCamera.SnapImmediate();
+            }
+
+            // 5. Drop-in animation
             PlayClip(respawnClip);
             float elapsed = 0f;
             while (elapsed < dropInDuration)
@@ -197,18 +219,12 @@ namespace SpaceCleaner.Player
             }
             transform.position = deathPosition;
 
-            // Restore camera
-            if (sphericalCamera != null)
-                sphericalCamera.SetTarget(transform, movement.Planet);
-
-            // Re-show HUD
+            // 6. Re-show HUD
             var hud = FindAnyObjectByType<GameplayHUD>();
             if (hud != null) hud.ShowHUD();
 
-            // 5. Invincibility window with blinking
+            // 7. Invincibility window with blinking
             yield return InvincibilityCoroutine();
-
-            isDying = false;
         }
 
         private IEnumerator InvincibilityCoroutine()
