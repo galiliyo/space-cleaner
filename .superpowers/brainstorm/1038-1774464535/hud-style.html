@@ -1,0 +1,188 @@
+<h2>HP Bar & Vacuum Meter — Which style fits the game?</h2>
+<p class="subtitle">Space Cleaner is a mobile space shooter. Pick the HUD style that feels right.</p>
+
+<style>
+  /* Space game dark background for mockups */
+  .game-bg {
+    background: radial-gradient(ellipse at center, #0a0f1e 0%, #050810 100%);
+    border: 1px solid #1a2240;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    min-height: 120px;
+  }
+
+  /* ---- OPTION A: Segmented Sci-Fi ---- */
+  .hud-a { font-family: 'Courier New', monospace; }
+  .hud-a-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .hud-a-icon { font-size: 14px; width: 20px; text-align: center; }
+  .hud-a-label { color: #7ec8e3; font-size: 10px; font-weight: bold; letter-spacing: 2px; width: 36px; }
+  .hud-a-segments { display: flex; gap: 2px; }
+  .seg { width: 12px; height: 14px; border-radius: 2px; }
+  .seg-hp-full { background: #00ff88; box-shadow: 0 0 4px #00ff8866; }
+  .seg-hp-empty { background: #1a2a20; border: 1px solid #2a4a30; }
+  .seg-hp-low { background: #ff4444; box-shadow: 0 0 4px #ff444466; }
+  .seg-vac-full { background: #00ccff; box-shadow: 0 0 4px #00ccff66; }
+  .seg-vac-empty { background: #0a1a2a; border: 1px solid #1a3040; }
+  .hud-a-val { color: #ccddee; font-size: 10px; }
+
+  /* ---- OPTION B: Gradient Bar with Glow ---- */
+  .hud-b { font-family: 'Arial', sans-serif; }
+  .hud-b-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .hud-b-icon { font-size: 16px; }
+  .hud-b-track {
+    flex: 1; height: 10px; background: rgba(255,255,255,0.07);
+    border-radius: 5px; overflow: visible; position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .hud-b-fill-hp {
+    height: 100%; border-radius: 5px;
+    background: linear-gradient(90deg, #ff3333 0%, #ffcc00 50%, #33ff88 100%);
+    width: 70%;
+    box-shadow: 0 0 6px #88ff8899, 0 0 12px #33ff8833;
+    position: relative;
+  }
+  .hud-b-fill-hp::after {
+    content: '';
+    position: absolute; right: 0; top: -2px; bottom: -2px;
+    width: 3px; background: white; border-radius: 2px;
+    box-shadow: 0 0 6px white;
+  }
+  .hud-b-fill-vac {
+    height: 100%; border-radius: 5px;
+    background: linear-gradient(90deg, #0066ff 0%, #00ccff 100%);
+    width: 45%;
+    box-shadow: 0 0 6px #00ccff99, 0 0 12px #00ccff33;
+    position: relative;
+  }
+  .hud-b-fill-vac::after {
+    content: '';
+    position: absolute; right: 0; top: -2px; bottom: -2px;
+    width: 3px; background: #88eeff; border-radius: 2px;
+    box-shadow: 0 0 6px #88eeff;
+  }
+  .hud-b-label { color: #8899bb; font-size: 10px; letter-spacing: 1px; width: 36px; }
+  .hud-b-val { color: #aabbcc; font-size: 10px; min-width: 28px; text-align: right; }
+
+  /* ---- OPTION C: Circular/Arc style ---- */
+  .hud-c { font-family: 'Arial', sans-serif; }
+  .hud-c-circles { display: flex; gap: 16px; align-items: center; }
+  .hud-c-circle { text-align: center; }
+  .arc-svg { width: 64px; height: 64px; }
+  .arc-bg { stroke: rgba(255,255,255,0.08); fill: none; stroke-width: 6; stroke-linecap: round; }
+  .arc-hp { stroke: #44ff88; fill: none; stroke-width: 6; stroke-linecap: round;
+    stroke-dasharray: 113; stroke-dashoffset: 34; /* 70% full */
+    filter: drop-shadow(0 0 3px #44ff8888); }
+  .arc-vac { stroke: #00ccff; fill: none; stroke-width: 6; stroke-linecap: round;
+    stroke-dasharray: 113; stroke-dashoffset: 62; /* 45% full */
+    filter: drop-shadow(0 0 3px #00ccff88); }
+  .arc-label { font-size: 9px; color: #7799aa; letter-spacing: 1px; margin-top: 2px; }
+  .arc-val { font-size: 13px; color: #ddeeff; font-weight: bold; }
+  .arc-icon { font-size: 11px; }
+  .arc-inner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .arc-wrap { position: relative; width: 64px; height: 64px; }
+  .hud-c-title { color: #556677; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+</style>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image game-bg hud-a">
+      <div class="hud-a-row">
+        <span class="hud-a-icon">❤</span>
+        <span class="hud-a-label">HP</span>
+        <div class="hud-a-segments">
+          <div class="seg seg-hp-full"></div><div class="seg seg-hp-full"></div>
+          <div class="seg seg-hp-full"></div><div class="seg seg-hp-full"></div>
+          <div class="seg seg-hp-full"></div><div class="seg seg-hp-full"></div>
+          <div class="seg seg-hp-full"></div><div class="seg seg-hp-empty"></div>
+          <div class="seg seg-hp-empty"></div><div class="seg seg-hp-empty"></div>
+        </div>
+        <span class="hud-a-val">7/10</span>
+      </div>
+      <div class="hud-a-row">
+        <span class="hud-a-icon">🌀</span>
+        <span class="hud-a-label">VAC</span>
+        <div class="hud-a-segments">
+          <div class="seg seg-vac-full"></div><div class="seg seg-vac-full"></div>
+          <div class="seg seg-vac-full"></div><div class="seg seg-vac-full"></div>
+          <div class="seg seg-vac-empty"></div><div class="seg seg-vac-empty"></div>
+          <div class="seg seg-vac-empty"></div><div class="seg seg-vac-empty"></div>
+          <div class="seg seg-vac-empty"></div><div class="seg seg-vac-empty"></div>
+        </div>
+        <span class="hud-a-val">23/50</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Segmented Sci-Fi</h3>
+      <p>Retro pixel blocks with glow. Each segment = 1 HP. Low health turns red. Classic arcade feel.</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image game-bg hud-b">
+      <div class="hud-b-row">
+        <span class="hud-b-icon">❤</span>
+        <span class="hud-b-label">HP</span>
+        <div class="hud-b-track"><div class="hud-b-fill-hp"></div></div>
+        <span class="hud-b-val">7/10</span>
+      </div>
+      <div class="hud-b-row">
+        <span class="hud-b-icon">🌀</span>
+        <span class="hud-b-label">VAC</span>
+        <div class="hud-b-track"><div class="hud-b-fill-vac"></div></div>
+        <span class="hud-b-val">23/50</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Gradient Bar + Glow</h3>
+      <p>Smooth fill with a bright-edge cursor. HP transitions red→yellow→green. Vacuum is cyan. Sleek modern feel.</p>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image game-bg hud-c">
+      <div class="hud-c-circles">
+        <div class="hud-c-circle">
+          <div class="hud-c-title">HEALTH</div>
+          <div class="arc-wrap">
+            <svg class="arc-svg" viewBox="0 0 64 64">
+              <circle class="arc-bg" cx="32" cy="32" r="26" transform="rotate(-90 32 32)"/>
+              <circle class="arc-hp" cx="32" cy="32" r="18" transform="rotate(-90 32 32)"/>
+            </svg>
+            <div class="arc-inner">
+              <div class="arc-icon">❤</div>
+              <div class="arc-val">7</div>
+            </div>
+          </div>
+          <div class="arc-label">/ 10</div>
+        </div>
+        <div class="hud-c-circle">
+          <div class="hud-c-title">VACUUM</div>
+          <div class="arc-wrap">
+            <svg class="arc-svg" viewBox="0 0 64 64">
+              <circle class="arc-bg" cx="32" cy="32" r="26" transform="rotate(-90 32 32)"/>
+              <circle class="arc-vac" cx="32" cy="32" r="18" transform="rotate(-90 32 32)"/>
+            </svg>
+            <div class="arc-inner">
+              <div class="arc-icon">🌀</div>
+              <div class="arc-val">23</div>
+            </div>
+          </div>
+          <div class="arc-label">/ 50</div>
+        </div>
+        <div style="color:#445566;font-size:10px;max-width:120px;line-height:1.4;">Circular arcs sit in screen corners — no overlap with the action area.</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Circular Arc</h3>
+      <p>Compact rings in the corner. Value shown in center. Saves horizontal space on mobile screens.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">Click a card to select it. All options use emoji icons as placeholders — real game icons (or no icons) in the final version.</p>

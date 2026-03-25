@@ -32,7 +32,21 @@ namespace SpaceCleaner.Core
         /// <summary>One pool per trash prefab variant, created at runtime.</summary>
         private ObjectPool[] trashPools;
 
+        private static TrashSpawner s_Instance;
+
         public int ActiveTrashCount => activeTrashCount;
+
+        public static GameObject GetRandomTrashPrefab()
+        {
+            if (s_Instance == null || s_Instance.trashPrefabs == null || s_Instance.trashPrefabs.Length == 0)
+                return null;
+            return s_Instance.trashPrefabs[Random.Range(0, s_Instance.trashPrefabs.Length)];
+        }
+
+        private void Awake()
+        {
+            s_Instance = this;
+        }
 
         private void Start()
         {

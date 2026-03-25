@@ -19,9 +19,11 @@ namespace SpaceCleaner.Player
         private InputAction moveAction;
         private InputAction aimAction;
         private float overflowDecayTimer;
+        private bool isDead;
 
         public int AmmoCount => ammoCount;
         public int SoftCap => softCap;
+        public bool IsDead { get => isDead; set => isDead = value; }
 
         public event System.Action<int> OnAmmoChanged;
 
@@ -92,7 +94,7 @@ namespace SpaceCleaner.Player
 
         private void Update()
         {
-            if (moveAction == null || aimAction == null) return;
+            if (isDead || moveAction == null || aimAction == null) return;
 
             // Feed movement input
             Vector2 moveInput = moveAction.ReadValue<Vector2>();
@@ -128,6 +130,14 @@ namespace SpaceCleaner.Player
             ammoCount -= amount;
             OnAmmoChanged?.Invoke(ammoCount);
             return true;
+        }
+
+        /// <summary>Zeroes ammo on death (soft penalty per spec).</summary>
+        public void ResetAmmo()
+        {
+            ammoCount = 0;
+            overflowDecayTimer = 0f;
+            OnAmmoChanged?.Invoke(ammoCount);
         }
     }
 }

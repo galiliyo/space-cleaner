@@ -26,6 +26,7 @@ namespace SpaceCleaner.Core
         public event System.Action<float> OnCleanupChanged;
         public event System.Action OnLevelComplete;
         public event System.Action<bool> OnOpponentStateChanged;
+        public event System.Action OnPlayerDeath;
 
         private void Awake()
         {
@@ -63,8 +64,24 @@ namespace SpaceCleaner.Core
         {
             if (IsLevelComplete)
             {
+                SFXManager.Instance?.Play(SFXType.LevelComplete);
                 OnLevelComplete?.Invoke();
             }
+        }
+
+        public void NotifyPlayerDeath()
+        {
+            OnPlayerDeath?.Invoke();
+        }
+
+        public void PauseGame()
+        {
+            Time.timeScale = 0f;
+        }
+
+        public void ResumeGame()
+        {
+            Time.timeScale = 1f;
         }
     }
 }

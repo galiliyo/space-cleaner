@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
 using SpaceCleaner.Core;
 using SpaceCleaner.Player;
 
@@ -23,7 +24,7 @@ namespace SpaceCleaner.Enemies
 
         [Header("Combat")]
         [SerializeField] private float shootRange = 25f;
-        [SerializeField] private float shootCooldown = 1.5f;
+        [SerializeField] private float shootCooldown = 1.8f;
         [SerializeField] private float shootInaccuracy = 4f; // degrees of random spread
         [SerializeField] private GameObject projectilePrefab;
         [SerializeField] private Transform firePoint;
@@ -76,6 +77,10 @@ namespace SpaceCleaner.Enemies
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[AIOpponent] Initialized. planet={planet?.name ?? "NULL"}, player={(playerTransform != null ? "OK" : "NULL")}, ammo={collectedAmmo}, orbitRadius={orbitRadius}, trashLayer={trashLayer.value}");
 #endif
+
+            // Disable shadows on opponent
+            foreach (var renderer in GetComponentsInChildren<Renderer>())
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
         }
 
         private void Update()
@@ -172,7 +177,7 @@ namespace SpaceCleaner.Enemies
             {
                 MoveToward(playerTransform.position);
             }
-            else if (shootTimer <= 0f && collectedAmmo > 0)
+            else if (shootTimer <= 0f)
             {
                 Shoot();
             }
@@ -207,8 +212,8 @@ namespace SpaceCleaner.Enemies
         {
             if (projectilePrefab == null || firePoint == null) return;
 
-            collectedAmmo--;
             shootTimer = shootCooldown;
+            SFXManager.Instance?.Play(SFXType.AIShoot);
 
             Vector3 dir = (playerTransform.position - firePoint.position).normalized;
             dir = Quaternion.Euler(
@@ -253,6 +258,7 @@ namespace SpaceCleaner.Enemies
             SnapToSurface();
 
             bounceVelocity = away * bounceSpeed;
+            SFXManager.Instance?.Play(SFXType.AIPlayerBounce);
             if (playerMovement != null)
                 playerMovement.ApplyBounce(-away, bounceSpeed);
         }
@@ -283,14 +289,18 @@ namespace SpaceCleaner.Enemies
             var trash = other.GetComponent<TrashPickup>();
             if (trash != null && !trash.IsBeingCollected)
             {
+                bool countsForProgress = trash.CountsForProgress;
                 ObjectPool.ReturnOrDestroy(other.gameObject);
                 collectedAmmo++;
-                GameManager.Instance?.RegisterTrashCollected();
+                SFXManager.Instance?.Play(SFXType.AICollectTrash);
+                if (countsForProgress)
+                    GameManager.Instance?.RegisterTrashCollected();
             }
         }
 
         private void OnDeath()
         {
+            SFXManager.Instance?.Play(SFXType.AIDeath);
             // Transfer collected ammo to player
             var player = FindAnyObjectByType<PlayerController>();
             if (player != null)

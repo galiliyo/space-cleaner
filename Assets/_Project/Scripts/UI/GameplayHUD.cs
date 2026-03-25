@@ -38,12 +38,25 @@ namespace SpaceCleaner.UI
         [Tooltip("If true, touch controls are created on Start when running on a touch device or in the Editor.")]
         [SerializeField] private bool autoCreateTouchControls = true;
 
+        [Header("Vacuum Meter")]
+        [SerializeField] private Slider vacuumBar;
+        [SerializeField] private TextMeshProUGUI vacuumText;
+
         private PlayerController player;
         private Health playerHealth;
         private ShootingSystem shootingSystem;
         private Image burstCooldownImage;
+        private Image healthFillImage;
+        private Image cleanupGlowEdge;
+        private Image healthGlowEdge;
+        private Image vacuumFillImage;
+        private Image vacuumGlowEdge;
+        private GameObject hudElementsRoot;
         private static Shader s_ParticleShader;
         private static Material s_ConfettiMaterial;
+        private static Texture2D s_HealthGradientTex;
+        private static Texture2D s_VacuumGradientTex;
+        private static Texture2D s_CleanupGradientTex;
         private int lastDisplayedAmmo = -1;
         private int lastDisplayedCleanupPercent = -1;
 
@@ -90,11 +103,16 @@ namespace SpaceCleaner.UI
                 GameManager.Instance.OnCleanupChanged += UpdateCleanupDisplay;
                 GameManager.Instance.OnLevelComplete += ShowLevelComplete;
                 GameManager.Instance.OnOpponentStateChanged += HandleOpponentStateChanged;
+                GameManager.Instance.OnPlayerDeath += HideHUD;
             }
 
             // Build health bar programmatically if not assigned
             if (playerHealthBar == null)
                 CreatePlayerHealthBar();
+
+            // Build vacuum meter bar if not assigned
+            if (vacuumBar == null)
+                CreateVacuumBar();
 
             // Build cleanup bar programmatically if not assigned
             if (cleanupBar == null)
@@ -298,6 +316,19 @@ namespace SpaceCleaner.UI
 
             if (ammoOverflowIndicator != null && player != null)
                 ammoOverflowIndicator.enabled = ammo > player.SoftCap;
+
+            // Update vacuum bar
+            if (vacuumBar != null && player != null)
+            {
+                float norm = Mathf.Clamp01((float)ammo / player.SoftCap);
+                vacuumBar.value = norm;
+                bool overflow = ammo > player.SoftCap;
+                // Tint fill red when overflowing
+                if (vacuumFillImage != null)
+                    vacuumFillImage.color = overflow ? new Color(1f, 0.3f, 0.2f, 1f) : Color.white;
+            }
+            if (vacuumText != null && player != null)
+                vacuumText.text = $"{ammo}/{player.SoftCap}";
         }
 
         private void UpdateCleanupDisplay(float percentage)
@@ -606,7 +637,7 @@ namespace SpaceCleaner.UI
             containerRT.sizeDelta = new Vector2(220f, 28f);
 
             var borderImage = containerGO.AddComponent<Image>();
-            borderImage.color = new Color(0.12f, 0.12f, 0.18f, 0.92f);
+            borderImage.color = new Color(0.15f, 0.15f, 0.22f, 0.95f);
 
             // "HP" label
             var labelGO = new GameObject("Label");
@@ -620,7 +651,7 @@ namespace SpaceCleaner.UI
             var labelTMP = labelGO.AddComponent<TextMeshProUGUI>();
             labelTMP.text = "HP";
             labelTMP.fontSize = 12f;
-            labelTMP.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+            labelTMP.color = new Color(0.85f, 0.85f, 0.9f, 1f);
             labelTMP.alignment = TextAlignmentOptions.Left;
             labelTMP.fontStyle = FontStyles.Bold;
 
@@ -646,7 +677,20 @@ namespace SpaceCleaner.UI
             bgRT.anchorMax = Vector2.one;
             bgRT.sizeDelta = Vector2.zero;
             var bgImg = bgGO.AddComponent<Image>();
-            bgImg.color = new Color(0.3f, 0.1f, 0.1f, 0.8f);
+            bgImg.color = new Color(0.2f, 0.08f, 0.08f, 0.8f);
+
+            // Glow layer (slightly larger, low alpha, behind fill)
+            var glowGO = new GameObject("Glow");
+            var glowRT = glowGO.AddComponent<RectTransform>();
+            glowRT.SetParent(barRT, false);
+            glowRT.anchorMin = Vector2.zero;
+            glowRT.anchorMax = Vector2.one;
+            glowRT.offsetMin = new Vector2(-1f, -1f);
+            glowRT.offsetMax = new Vector2(1f, 1f);
+            var glowImg = glowGO.AddComponent<Image>();
+            glowImg.sprite = GenerateGradientSprite(s_HealthGradientTex ??= GenerateGradientTexture(256,
+                new Color(1f, 0.2f, 0.2f), new Color(1f, 0.85f, 0f), new Color(0.2f, 1f, 0.5f)));
+            glowImg.color = new Color(1f, 1f, 1f, 0.15f);
 
             // Fill area
             var fillAreaGO = new GameObject("Fill Area");
@@ -662,10 +706,22 @@ namespace SpaceCleaner.UI
             fillRT.anchorMin = Vector2.zero;
             fillRT.anchorMax = Vector2.one;
             fillRT.sizeDelta = Vector2.zero;
-            var fillImage = fillGO.AddComponent<Image>();
-            fillImage.color = new Color(0.1f, 0.85f, 0.2f, 1f);
+            healthFillImage = fillGO.AddComponent<Image>();
+            healthFillImage.sprite = GenerateGradientSprite(s_HealthGradientTex);
+            healthFillImage.color = Color.white;
 
             playerHealthBar.fillRect = fillRT;
+
+            // Bright edge cursor (anchored to right edge of fill)
+            var edgeGO = new GameObject("GlowEdge");
+            var edgeRT = edgeGO.AddComponent<RectTransform>();
+            edgeRT.SetParent(fillRT, false);
+            edgeRT.anchorMin = new Vector2(1f, 0f);
+            edgeRT.anchorMax = new Vector2(1f, 1f);
+            edgeRT.pivot = new Vector2(1f, 0.5f);
+            edgeRT.sizeDelta = new Vector2(3f, 0f);
+            healthGlowEdge = edgeGO.AddComponent<Image>();
+            healthGlowEdge.color = new Color(1f, 1f, 1f, 0.9f);
 
             // HP text overlaid on the bar
             var textGO = new GameObject("PlayerHealthText");
@@ -681,6 +737,124 @@ namespace SpaceCleaner.UI
             playerHealthText.color = Color.white;
             playerHealthText.alignment = TextAlignmentOptions.Center;
             playerHealthText.text = "0/0";
+        }
+
+        private void CreateVacuumBar()
+        {
+            var parentRT = GetComponent<RectTransform>();
+            if (parentRT == null) return;
+
+            // Container below the health bar
+            var containerGO = new GameObject("VacuumContainer");
+            var containerRT = containerGO.AddComponent<RectTransform>();
+            containerRT.SetParent(parentRT, false);
+            containerRT.anchorMin = new Vector2(0f, 1f);
+            containerRT.anchorMax = new Vector2(0f, 1f);
+            containerRT.pivot = new Vector2(0f, 1f);
+            containerRT.anchoredPosition = new Vector2(10f, -42f);
+            containerRT.sizeDelta = new Vector2(220f, 28f);
+
+            var borderImage = containerGO.AddComponent<Image>();
+            borderImage.color = new Color(0.15f, 0.15f, 0.22f, 0.95f);
+
+            // "VAC" label
+            var labelGO = new GameObject("Label");
+            var labelRT = labelGO.AddComponent<RectTransform>();
+            labelRT.SetParent(containerRT, false);
+            labelRT.anchorMin = new Vector2(0f, 0f);
+            labelRT.anchorMax = new Vector2(0f, 1f);
+            labelRT.pivot = new Vector2(0f, 0.5f);
+            labelRT.anchoredPosition = new Vector2(6f, 0f);
+            labelRT.sizeDelta = new Vector2(34f, 0f);
+            var labelTMP = labelGO.AddComponent<TextMeshProUGUI>();
+            labelTMP.text = "VAC";
+            labelTMP.fontSize = 11f;
+            labelTMP.color = new Color(0.6f, 0.9f, 1f, 1f);
+            labelTMP.alignment = TextAlignmentOptions.Left;
+            labelTMP.fontStyle = FontStyles.Bold;
+
+            // Slider
+            var barGO = new GameObject("VacuumBar");
+            var barRT = barGO.AddComponent<RectTransform>();
+            barRT.SetParent(containerRT, false);
+            barRT.anchorMin = Vector2.zero;
+            barRT.anchorMax = Vector2.one;
+            barRT.offsetMin = new Vector2(34f, 3f);
+            barRT.offsetMax = new Vector2(-3f, -3f);
+
+            vacuumBar = barGO.AddComponent<Slider>();
+            vacuumBar.minValue = 0f;
+            vacuumBar.maxValue = 1f;
+            vacuumBar.interactable = false;
+
+            // Background
+            var bgGO = new GameObject("Background");
+            var bgRT = bgGO.AddComponent<RectTransform>();
+            bgRT.SetParent(barRT, false);
+            bgRT.anchorMin = Vector2.zero;
+            bgRT.anchorMax = Vector2.one;
+            bgRT.sizeDelta = Vector2.zero;
+            var bgImg = bgGO.AddComponent<Image>();
+            bgImg.color = new Color(0.06f, 0.1f, 0.18f, 0.8f);
+
+            // Glow layer
+            var glowGO = new GameObject("Glow");
+            var glowRT = glowGO.AddComponent<RectTransform>();
+            glowRT.SetParent(barRT, false);
+            glowRT.anchorMin = Vector2.zero;
+            glowRT.anchorMax = Vector2.one;
+            glowRT.offsetMin = new Vector2(-1f, -1f);
+            glowRT.offsetMax = new Vector2(1f, 1f);
+            var glowImg = glowGO.AddComponent<Image>();
+            glowImg.sprite = GenerateGradientSprite(s_VacuumGradientTex ??= GenerateGradientTexture(256,
+                new Color(0f, 0.4f, 1f), new Color(0f, 0.8f, 1f), new Color(0.6f, 1f, 1f)));
+            glowImg.color = new Color(1f, 1f, 1f, 0.15f);
+
+            // Fill area
+            var fillAreaGO = new GameObject("Fill Area");
+            var fillAreaRT = fillAreaGO.AddComponent<RectTransform>();
+            fillAreaRT.SetParent(barRT, false);
+            fillAreaRT.anchorMin = Vector2.zero;
+            fillAreaRT.anchorMax = Vector2.one;
+            fillAreaRT.sizeDelta = Vector2.zero;
+
+            var fillGO = new GameObject("Fill");
+            var fillRT = fillGO.AddComponent<RectTransform>();
+            fillRT.SetParent(fillAreaRT, false);
+            fillRT.anchorMin = Vector2.zero;
+            fillRT.anchorMax = Vector2.one;
+            fillRT.sizeDelta = Vector2.zero;
+            vacuumFillImage = fillGO.AddComponent<Image>();
+            vacuumFillImage.sprite = GenerateGradientSprite(s_VacuumGradientTex);
+            vacuumFillImage.color = Color.white;
+
+            vacuumBar.fillRect = fillRT;
+
+            // Bright edge cursor
+            var edgeGO = new GameObject("GlowEdge");
+            var edgeRT = edgeGO.AddComponent<RectTransform>();
+            edgeRT.SetParent(fillRT, false);
+            edgeRT.anchorMin = new Vector2(1f, 0f);
+            edgeRT.anchorMax = new Vector2(1f, 1f);
+            edgeRT.pivot = new Vector2(1f, 0.5f);
+            edgeRT.sizeDelta = new Vector2(3f, 0f);
+            vacuumGlowEdge = edgeGO.AddComponent<Image>();
+            vacuumGlowEdge.color = new Color(0.7f, 1f, 1f, 0.9f);
+
+            // Text overlay
+            var textGO = new GameObject("VacuumText");
+            var textRT = textGO.AddComponent<RectTransform>();
+            textRT.SetParent(containerRT, false);
+            textRT.anchorMin = Vector2.zero;
+            textRT.anchorMax = Vector2.one;
+            textRT.sizeDelta = Vector2.zero;
+            textRT.anchoredPosition = new Vector2(14f, 0f);
+
+            vacuumText = textGO.AddComponent<TextMeshProUGUI>();
+            vacuumText.fontSize = 12f;
+            vacuumText.color = Color.white;
+            vacuumText.alignment = TextAlignmentOptions.Center;
+            vacuumText.text = "0/0";
         }
 
         private void CreateCleanupBar()
@@ -756,9 +930,22 @@ namespace SpaceCleaner.UI
             fillRT.anchorMax = Vector2.one;
             fillRT.sizeDelta = Vector2.zero;
             var fillImage = fillGO.AddComponent<Image>();
-            fillImage.color = new Color(0.2f, 0.7f, 1f, 1f);
+            fillImage.sprite = GenerateGradientSprite(s_CleanupGradientTex ??= GenerateGradientTexture(256,
+                new Color(0.1f, 0.4f, 0.9f), new Color(0.2f, 0.7f, 1f), new Color(0.5f, 0.9f, 1f)));
+            fillImage.color = Color.white;
 
             cleanupBar.fillRect = fillRT;
+
+            // Bright edge cursor
+            var edgeGO = new GameObject("GlowEdge");
+            var edgeRT = edgeGO.AddComponent<RectTransform>();
+            edgeRT.SetParent(fillRT, false);
+            edgeRT.anchorMin = new Vector2(1f, 0f);
+            edgeRT.anchorMax = new Vector2(1f, 1f);
+            edgeRT.pivot = new Vector2(1f, 0.5f);
+            edgeRT.sizeDelta = new Vector2(3f, 0f);
+            cleanupGlowEdge = edgeGO.AddComponent<Image>();
+            cleanupGlowEdge.color = new Color(0.7f, 0.95f, 1f, 0.9f);
 
             // Percentage text overlaid
             var textGO = new GameObject("CleanupPercentText");
@@ -812,6 +999,67 @@ namespace SpaceCleaner.UI
             opponentDefeatedPanel.SetActive(false);
         }
 
+        // --- Gradient texture helpers ---
+
+        private static Texture2D GenerateGradientTexture(int width, Color left, Color mid, Color right)
+        {
+            var tex = new Texture2D(width, 1, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            var pixels = new Color[width];
+            float halfW = width * 0.5f;
+            for (int x = 0; x < width; x++)
+            {
+                float t = (float)x / (width - 1);
+                pixels[x] = t < 0.5f
+                    ? Color.Lerp(left, mid, t * 2f)
+                    : Color.Lerp(mid, right, (t - 0.5f) * 2f);
+            }
+            tex.SetPixels(pixels);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        private static Sprite GenerateGradientSprite(Texture2D tex)
+        {
+            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+                new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        // --- Death overlay HUD hiding ---
+
+        /// <summary>Hides gameplay HUD elements while death overlay is active.</summary>
+        public void HideHUD()
+        {
+            SetHUDVisible(false);
+        }
+
+        /// <summary>Re-shows gameplay HUD elements after respawn.</summary>
+        public void ShowHUD()
+        {
+            SetHUDVisible(true);
+        }
+
+        private void SetHUDVisible(bool visible)
+        {
+            // Hide/show all top-level HUD children except panels (which manage themselves)
+            if (moveJoystick != null) moveJoystick.gameObject.SetActive(visible);
+            if (fireButton != null) fireButton.gameObject.SetActive(visible);
+            if (burstCooldownImage != null) burstCooldownImage.gameObject.SetActive(visible);
+
+            // Health and vacuum containers are children of this transform
+            var healthContainer = playerHealthBar?.transform.parent?.parent;
+            if (healthContainer != null) healthContainer.gameObject.SetActive(visible);
+
+            var vacuumContainer = vacuumBar?.transform.parent?.parent;
+            if (vacuumContainer != null) vacuumContainer.gameObject.SetActive(visible);
+
+            var cleanupContainer = cleanupBar?.transform.parent?.parent;
+            if (cleanupContainer != null) cleanupContainer.gameObject.SetActive(visible);
+
+            if (ammoText != null) ammoText.gameObject.SetActive(visible);
+        }
+
         private void OnDestroy()
         {
             if (player != null)
@@ -825,6 +1073,7 @@ namespace SpaceCleaner.UI
                 GameManager.Instance.OnCleanupChanged -= UpdateCleanupDisplay;
                 GameManager.Instance.OnLevelComplete -= ShowLevelComplete;
                 GameManager.Instance.OnOpponentStateChanged -= HandleOpponentStateChanged;
+                GameManager.Instance.OnPlayerDeath -= HideHUD;
             }
         }
     }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using SpaceCleaner.Core;
+using static SpaceCleaner.Core.SFXType;
 
 namespace SpaceCleaner.Player
 {
@@ -12,11 +13,11 @@ namespace SpaceCleaner.Player
         [SerializeField] private LayerMask trashLayer;
 
         [Header("Vacuum VFX")]
-        [SerializeField] private Color vacuumColorStart = new Color(0.6f, 0.85f, 1f, 0.15f);
-        [SerializeField] private Color vacuumColorEnd   = new Color(0.4f, 0.7f, 1f, 0f);
-        [SerializeField] private int maxParticles = 8;
-        [SerializeField] private float particleSize = 0.06f;
-        [SerializeField] private float particleLifetime = 0.8f;
+        [SerializeField] private Color vacuumColorStart = new Color(0.7f, 0.95f, 1f, 0.3f);
+        [SerializeField] private Color vacuumColorEnd   = new Color(1f, 1f, 1f, 0f);
+        [SerializeField] private int maxParticles = 25;
+        [SerializeField] private float particleSize = 0.04f;
+        [SerializeField] private float particleLifetime = 0.6f;
 
         private static Shader s_ParticleShader;
         private static Shader s_FallbackParticleShader;
@@ -26,6 +27,8 @@ namespace SpaceCleaner.Player
         private PlayerController playerController;
         private SphereCollider vacuumTrigger;
         private ParticleSystem vacuumVFX;
+        private ParticleSystem vortexRingPS;
+        private ParticleSystem vortexGlowPS;
         private int trashInRangeCount;
 
         private void Awake()
@@ -38,6 +41,8 @@ namespace SpaceCleaner.Player
             vacuumTrigger.radius = collectRadius;
 
             CreateVacuumParticleSystem();
+            CreateVortexRing();
+            CreateVortexGlow();
         }
 
         private void OnEnable()
@@ -62,7 +67,7 @@ namespace SpaceCleaner.Player
             main.loop = true;
             main.startLifetime = particleLifetime;
             main.startSpeed = 0f; // movement handled by velocity-over-lifetime
-            main.startSize = particleSize;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.08f);
             main.startColor = vacuumColorStart;
             main.maxParticles = maxParticles;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
@@ -85,7 +90,7 @@ namespace SpaceCleaner.Player
             vel.enabled = true;
             vel.space = ParticleSystemSimulationSpace.Local;
             // Radial velocity: negative = inward. Particles travel ~collectRadius in their lifetime.
-            vel.radial = new ParticleSystem.MinMaxCurve(-collectRadius / particleLifetime * 1.2f);
+            vel.radial = new ParticleSystem.MinMaxCurve(-collectRadius / particleLifetime * 1.8f);
 
             // --- Size over Lifetime: shrink as they approach center ---
             var sizeOverLife = vacuumVFX.sizeOverLifetime;
@@ -95,19 +100,29 @@ namespace SpaceCleaner.Player
                 new Keyframe(1f, 0.2f)
             ));
 
-            // --- Color over Lifetime: fade from cyan to transparent blue ---
+            // --- Color over Lifetime: fade with white flash at 30% ---
             var colorOverLife = vacuumVFX.colorOverLifetime;
             colorOverLife.enabled = true;
             var gradient = new Gradient();
             gradient.SetKeys(
-                new[] { new GradientColorKey(vacuumColorStart, 0f), new GradientColorKey(vacuumColorEnd, 1f) },
-                new[] { new GradientAlphaKey(vacuumColorStart.a, 0f), new GradientAlphaKey(0f, 1f) }
+                new[] {
+                    new GradientColorKey(vacuumColorStart, 0f),
+                    new GradientColorKey(new Color(1f, 1f, 1f), 0.3f),
+                    new GradientColorKey(vacuumColorEnd, 1f)
+                },
+                new[] {
+                    new GradientAlphaKey(0.3f, 0f),
+                    new GradientAlphaKey(0.5f, 0.3f),
+                    new GradientAlphaKey(0f, 1f)
+                }
             );
             colorOverLife.color = new ParticleSystem.MinMaxGradient(gradient);
 
-            // --- Renderer: use default particle with additive URP-compatible material ---
+            // --- Renderer: use stretched billboard with additive URP-compatible material ---
             var renderer = vfxGO.GetComponent<ParticleSystemRenderer>();
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.lengthScale = 4f;
+            renderer.velocityScale = 0.5f;
 
             // Create a simple additive unlit particle material (URP compatible, shared across instances)
             if (s_ParticleMaterial == null)
@@ -132,6 +147,119 @@ namespace SpaceCleaner.Player
             renderer.sharedMaterial = s_ParticleMaterial;
         }
 
+        private void CreateVortexRing()
+        {
+            var ringGO = new GameObject("VortexRing");
+            ringGO.transform.SetParent(transform, false);
+            ringGO.transform.localPosition = Vector3.zero;
+
+            var ringPS = ringGO.AddComponent<ParticleSystem>();
+            ringPS.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = ringPS.main;
+            main.loop = true;
+            main.startLifetime = 1.5f;
+            main.startSpeed = 0f;
+            main.startSize = 0.04f;
+            main.startColor = new Color(0.5f, 0.9f, 1f, 0.25f);
+            main.maxParticles = 6;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.playOnAwake = false;
+
+            var emission = ringPS.emission;
+            emission.rateOverTime = 4f;
+            emission.enabled = true;
+
+            var shape = ringPS.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.3f;
+            shape.radiusThickness = 0f;
+
+            // Orbital velocity for spinning
+            var vel = ringPS.velocityOverLifetime;
+            vel.enabled = true;
+            vel.space = ParticleSystemSimulationSpace.Local;
+            vel.orbitalY = new ParticleSystem.MinMaxCurve(3f);
+
+            var sizeOverLife = ringPS.sizeOverLifetime;
+            sizeOverLife.enabled = true;
+            sizeOverLife.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0.8f),
+                new Keyframe(0.5f, 1f),
+                new Keyframe(1f, 0.3f)
+            ));
+
+            var colorOverLife = ringPS.colorOverLifetime;
+            colorOverLife.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(new Color(0.5f, 0.9f, 1f), 0f), new GradientColorKey(new Color(0.3f, 0.7f, 1f), 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.25f, 0.2f), new GradientAlphaKey(0f, 1f) }
+            );
+            colorOverLife.color = new ParticleSystem.MinMaxGradient(gradient);
+
+            var renderer = ringGO.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sharedMaterial = s_ParticleMaterial;
+
+            // Store reference to control play/stop with main system
+            vortexRingPS = ringPS;
+        }
+
+        private void CreateVortexGlow()
+        {
+            var glowGO = new GameObject("VortexGlow");
+            glowGO.transform.SetParent(transform, false);
+            glowGO.transform.localPosition = Vector3.zero;
+
+            var glowPS = glowGO.AddComponent<ParticleSystem>();
+            glowPS.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = glowPS.main;
+            main.loop = true;
+            main.startLifetime = 2f;
+            main.startSpeed = 0f;
+            main.startSize = 0.4f;
+            main.startColor = new Color(0.4f, 0.85f, 1f, 0.1f);
+            main.maxParticles = 2;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.playOnAwake = false;
+
+            var emission = glowPS.emission;
+            emission.rateOverTime = 1f;
+            emission.enabled = true;
+
+            var shape = glowPS.shape;
+            shape.enabled = false; // emit at local origin
+
+            // Pulsing size
+            var sizeOverLife = glowPS.sizeOverLifetime;
+            sizeOverLife.enabled = true;
+            sizeOverLife.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0.7f),
+                new Keyframe(0.25f, 1.2f),
+                new Keyframe(0.5f, 0.8f),
+                new Keyframe(0.75f, 1.1f),
+                new Keyframe(1f, 0.6f)
+            ));
+
+            var colorOverLife = glowPS.colorOverLifetime;
+            colorOverLife.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(new Color(0.4f, 0.85f, 1f), 0f), new GradientColorKey(new Color(0.3f, 0.7f, 1f), 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.1f, 0.3f), new GradientAlphaKey(0.08f, 0.7f), new GradientAlphaKey(0f, 1f) }
+            );
+            colorOverLife.color = new ParticleSystem.MinMaxGradient(gradient);
+
+            var renderer = glowGO.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sharedMaterial = s_ParticleMaterial;
+
+            vortexGlowPS = glowPS;
+        }
+
         private void LateUpdate()
         {
             // Validate stale count: trash destroyed/pooled may not fire OnTriggerExit
@@ -153,11 +281,17 @@ namespace SpaceCleaner.Player
 
             if (trashInRangeCount > 0 && !vacuumVFX.isPlaying)
             {
+                SFXManager.Instance?.Play(VacuumStart);
                 vacuumVFX.Play();
+                if (vortexRingPS != null) vortexRingPS.Play();
+                if (vortexGlowPS != null) vortexGlowPS.Play();
             }
             else if (trashInRangeCount <= 0 && vacuumVFX.isPlaying)
             {
+                SFXManager.Instance?.Play(VacuumStop);
                 vacuumVFX.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                if (vortexRingPS != null) vortexRingPS.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                if (vortexGlowPS != null) vortexGlowPS.Stop(true, ParticleSystemStopBehavior.StopEmitting);
             }
         }
 

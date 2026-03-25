@@ -127,6 +127,7 @@ namespace SpaceCleaner.Core
             timer -= Time.deltaTime;
             if (timer <= 0f)
             {
+                SpawnTrashIfPlayerProjectile();
                 ObjectPool.ReturnOrDestroy(gameObject);
             }
         }
@@ -144,7 +145,26 @@ namespace SpaceCleaner.Core
                 health.TakeDamage(damage);
             }
 
+            SFXManager.Instance?.PlayAtPosition(SFXType.ProjectileImpact, transform.position);
             ObjectPool.ReturnOrDestroy(gameObject);
+        }
+
+        private void SpawnTrashIfPlayerProjectile()
+        {
+            // Only player projectiles (layer 6) convert to trash
+            if (shooterLayer != 6) return;
+
+            var trashPrefab = TrashSpawner.GetRandomTrashPrefab();
+            if (trashPrefab == null) return;
+
+            var pool = ObjectPool.GetPoolForPrefab(trashPrefab);
+            GameObject trash = pool != null
+                ? pool.Get(transform.position, Quaternion.identity)
+                : Object.Instantiate(trashPrefab, transform.position, Quaternion.identity);
+
+            var pickup = trash.GetComponent<TrashPickup>();
+            if (pickup != null)
+                pickup.CountsForProgress = false;
         }
     }
 }

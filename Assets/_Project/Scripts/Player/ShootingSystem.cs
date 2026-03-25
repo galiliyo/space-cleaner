@@ -1,5 +1,6 @@
 using UnityEngine;
 using SpaceCleaner.Core;
+using static SpaceCleaner.Core.SFXType;
 
 namespace SpaceCleaner.Player
 {
@@ -177,6 +178,7 @@ namespace SpaceCleaner.Player
         private void FireProjectile()
         {
             if (!playerController.TryConsumeAmmo()) return;
+            SFXManager.Instance?.Play(PlayerShoot);
             if (projectilePrefab == null || firePoint == null) return;
 
             var pool = ObjectPool.GetPoolForPrefab(projectilePrefab);

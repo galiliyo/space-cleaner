@@ -69,6 +69,10 @@ namespace SpaceCleaner.Core
                 // Disable shadow casting on the player ship
                 foreach (var r in player.GetComponentsInChildren<Renderer>())
                     r.shadowCastingMode = ShadowCastingMode.Off;
+
+                // Add death handler if not present
+                if (player.GetComponent<PlayerDeathHandler>() == null)
+                    player.gameObject.AddComponent<PlayerDeathHandler>();
             }
 
             // Setup camera

@@ -1,0 +1,200 @@
+<h2>Vacuum Effect — Which look?</h2>
+<p class="subtitle">The current effect: 8 tiny cyan dots drifting inward. What should it become?</p>
+
+<style>
+  .vfx-bg {
+    background: radial-gradient(ellipse at center, #0a0f1e 0%, #050810 100%);
+    border: 1px solid #1a2240;
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Ship placeholder */
+  .ship {
+    width: 28px; height: 28px;
+    background: #8899bb;
+    border-radius: 50% 50% 30% 30%;
+    position: relative;
+    z-index: 10;
+    box-shadow: 0 0 8px #8899bb66;
+  }
+
+  /* ---- A: Enhanced Particle Spiral ---- */
+  .vfx-a .ring {
+    position: absolute; border-radius: 50%;
+    border: 1px dashed rgba(0,204,255,0.15);
+    animation: spin-slow 6s linear infinite;
+  }
+  .vfx-a .ring-1 { width: 120px; height: 120px; top: calc(50% - 60px); left: calc(50% - 60px); }
+  .vfx-a .ring-2 { width: 80px; height: 80px; top: calc(50% - 40px); left: calc(50% - 40px); animation-direction: reverse; }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+
+  .vfx-a .particle {
+    position: absolute; width: 4px; height: 4px;
+    background: #00ccff; border-radius: 50%;
+    box-shadow: 0 0 6px #00ccff, 0 0 12px #00ccff66;
+    animation: spiral-in 1.5s ease-in infinite;
+  }
+  .vfx-a .p1 { top: 30%; left: 20%; animation-delay: 0s; }
+  .vfx-a .p2 { top: 15%; left: 55%; animation-delay: 0.3s; }
+  .vfx-a .p3 { top: 65%; left: 75%; animation-delay: 0.6s; }
+  .vfx-a .p4 { top: 70%; left: 30%; animation-delay: 0.9s; }
+  .vfx-a .p5 { top: 40%; left: 80%; animation-delay: 1.2s; }
+  .vfx-a .p6 { top: 80%; left: 50%; animation-delay: 0.15s; }
+  .vfx-a .p7 { top: 25%; left: 70%; animation-delay: 0.45s; }
+  .vfx-a .p8 { top: 55%; left: 15%; animation-delay: 0.75s; }
+  @keyframes spiral-in {
+    0% { opacity: 0.8; transform: scale(1.2); }
+    80% { opacity: 1; transform: scale(0.5); }
+    100% { opacity: 0; transform: scale(0); }
+  }
+
+  /* Center glow */
+  .vfx-a .core-glow {
+    position: absolute; width: 40px; height: 40px;
+    top: calc(50% - 20px); left: calc(50% - 20px);
+    background: radial-gradient(circle, rgba(0,204,255,0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { transform: scale(1.3); opacity: 0.6; } }
+
+  /* ---- B: Vortex Streaks ---- */
+  .vfx-b .streak {
+    position: absolute;
+    width: 2px; height: 20px;
+    border-radius: 1px;
+    animation: streak-in 1.2s ease-in infinite;
+    transform-origin: center bottom;
+  }
+  .streak-cyan { background: linear-gradient(to top, transparent, #00ccff, transparent); box-shadow: 0 0 4px #00ccff; }
+  .streak-white { background: linear-gradient(to top, transparent, #aaeeff, transparent); box-shadow: 0 0 4px #aaeeff; }
+  .vfx-b .s1 { top: 20%; left: 25%; transform: rotate(35deg); animation-delay: 0s; }
+  .vfx-b .s2 { top: 15%; left: 60%; transform: rotate(-20deg); animation-delay: 0.2s; }
+  .vfx-b .s3 { top: 60%; left: 75%; transform: rotate(-50deg); animation-delay: 0.4s; }
+  .vfx-b .s4 { top: 70%; left: 20%; transform: rotate(60deg); animation-delay: 0.6s; }
+  .vfx-b .s5 { top: 35%; left: 80%; transform: rotate(-35deg); animation-delay: 0.8s; }
+  .vfx-b .s6 { top: 80%; left: 55%; transform: rotate(10deg); animation-delay: 0.1s; }
+  .vfx-b .s7 { top: 25%; left: 40%; transform: rotate(-60deg); animation-delay: 0.5s; }
+  .vfx-b .s8 { top: 50%; left: 15%; transform: rotate(45deg); animation-delay: 0.7s; }
+  @keyframes streak-in {
+    0% { opacity: 0.6; transform: translateY(0) scaleY(1); }
+    70% { opacity: 1; transform: translateY(30px) scaleY(0.5); }
+    100% { opacity: 0; transform: translateY(50px) scaleY(0); }
+  }
+
+  .vfx-b .vortex-center {
+    position: absolute; width: 50px; height: 50px;
+    top: calc(50% - 25px); left: calc(50% - 25px);
+    border: 2px solid rgba(0,204,255,0.2);
+    border-radius: 50%;
+    animation: vortex-spin 2s linear infinite;
+  }
+  @keyframes vortex-spin { to { transform: rotate(360deg); } }
+
+  .vfx-b .vortex-glow {
+    position: absolute; width: 30px; height: 30px;
+    top: calc(50% - 15px); left: calc(50% - 15px);
+    background: radial-gradient(circle, rgba(0,204,255,0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  /* ---- C: Sparkle Cloud ---- */
+  .vfx-c .sparkle {
+    position: absolute; width: 3px; height: 3px;
+    background: white; border-radius: 50%;
+    animation: sparkle-drift 2s ease-in-out infinite;
+  }
+  .sparkle-lg { width: 5px; height: 5px; box-shadow: 0 0 8px #00ccff, 0 0 16px #00ccff44; background: #aaeeff; }
+  .sparkle-sm { width: 2px; height: 2px; box-shadow: 0 0 4px #4488ff; background: #aaddff; }
+  .vfx-c .sp1 { top: 25%; left: 22%; animation-delay: 0s; }
+  .vfx-c .sp2 { top: 18%; left: 58%; animation-delay: 0.3s; }
+  .vfx-c .sp3 { top: 62%; left: 72%; animation-delay: 0.6s; }
+  .vfx-c .sp4 { top: 72%; left: 28%; animation-delay: 0.9s; }
+  .vfx-c .sp5 { top: 38%; left: 78%; animation-delay: 0.15s; }
+  .vfx-c .sp6 { top: 78%; left: 52%; animation-delay: 0.45s; }
+  .vfx-c .sp7 { top: 30%; left: 42%; animation-delay: 0.75s; }
+  .vfx-c .sp8 { top: 55%; left: 18%; animation-delay: 1.05s; }
+  .vfx-c .sp9 { top: 42%; left: 65%; animation-delay: 0.5s; }
+  .vfx-c .sp10 { top: 60%; left: 40%; animation-delay: 0.2s; }
+  @keyframes sparkle-drift {
+    0% { opacity: 0; transform: scale(0) translate(0, 0); }
+    20% { opacity: 1; transform: scale(1.2); }
+    80% { opacity: 0.6; transform: scale(0.6) translate(5px, -5px); }
+    100% { opacity: 0; transform: scale(0) translate(10px, -10px); }
+  }
+
+  .vfx-c .cloud-glow {
+    position: absolute; width: 100px; height: 100px;
+    top: calc(50% - 50px); left: calc(50% - 50px);
+    background: radial-gradient(circle, rgba(0,180,255,0.1) 0%, rgba(0,100,200,0.05) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: cloud-breathe 3s ease-in-out infinite;
+  }
+  @keyframes cloud-breathe { 50% { transform: scale(1.15); opacity: 0.7; } }
+</style>
+
+<div class="cards">
+
+  <!-- Option A: Enhanced Spiral -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image vfx-bg vfx-a">
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="core-glow"></div>
+      <div class="particle p1"></div><div class="particle p2"></div>
+      <div class="particle p3"></div><div class="particle p4"></div>
+      <div class="particle p5"></div><div class="particle p6"></div>
+      <div class="particle p7"></div><div class="particle p8"></div>
+      <div class="ship"></div>
+    </div>
+    <div class="card-body">
+      <h3>A — Spiral Pull</h3>
+      <p>More particles (20+), visible spiral motion inward, pulsing center glow. Dashed guide rings hint at the vacuum radius. Builds on current approach, just more of it.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Vortex Streaks -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image vfx-bg vfx-b">
+      <div class="vortex-center"></div>
+      <div class="vortex-glow"></div>
+      <div class="streak streak-cyan s1"></div><div class="streak streak-white s2"></div>
+      <div class="streak streak-cyan s3"></div><div class="streak streak-white s4"></div>
+      <div class="streak streak-cyan s5"></div><div class="streak streak-white s6"></div>
+      <div class="streak streak-cyan s7"></div><div class="streak streak-white s8"></div>
+      <div class="ship"></div>
+    </div>
+    <div class="card-body">
+      <h3>B — Vortex Streaks</h3>
+      <p>Stretched trail particles that look like speed lines being sucked in. Spinning ring at center. More dramatic and "powerful" feeling. Uses stretched billboard rendering.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Sparkle Cloud -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image vfx-bg vfx-c">
+      <div class="cloud-glow"></div>
+      <div class="sparkle sparkle-lg sp1"></div><div class="sparkle sparkle-sm sp2"></div>
+      <div class="sparkle sparkle-lg sp3"></div><div class="sparkle sparkle-sm sp4"></div>
+      <div class="sparkle sparkle-sm sp5"></div><div class="sparkle sparkle-lg sp6"></div>
+      <div class="sparkle sparkle-sm sp7"></div><div class="sparkle sparkle-lg sp8"></div>
+      <div class="sparkle sparkle-sm sp9"></div><div class="sparkle sparkle-sm sp10"></div>
+      <div class="ship"></div>
+    </div>
+    <div class="card-body">
+      <h3>C — Sparkle Cloud</h3>
+      <p>Gentle glittering field around the ship. Soft ambient glow underneath. Feels magical/dreamy. Less aggressive than A/B — better if the vacuum is "always on" background ambiance.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">Click a card. The actual Unity effect will approximate this with ParticleSystem modules — no VFX Graph needed.</p>

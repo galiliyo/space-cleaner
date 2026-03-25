@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using SpaceCleaner.Player;
 
 namespace SpaceCleaner.Core
@@ -13,6 +14,12 @@ namespace SpaceCleaner.Core
         private const float MaxCollectionTime = 4f;
 
         public bool IsBeingCollected { get; private set; }
+
+        /// <summary>
+        /// When false, collecting this trash does not count toward level cleanup progress.
+        /// Used for trash converted from missed player projectiles.
+        /// </summary>
+        public bool CountsForProgress { get; set; } = true;
 
         private Transform target;
         private float moveSpeed;
@@ -64,7 +71,9 @@ namespace SpaceCleaner.Core
                 player.AddAmmo(1);
             }
 
-            GameManager.Instance?.RegisterTrashCollected();
+            SFXManager.Instance?.Play(SFXType.TrashCollected);
+            if (CountsForProgress)
+                GameManager.Instance?.RegisterTrashCollected();
             ObjectPool.ReturnOrDestroy(gameObject);
         }
 
@@ -74,12 +83,17 @@ namespace SpaceCleaner.Core
         /// </summary>
         private void OnEnable()
         {
+            // Disable shadows on trash (same pattern as AIOpponent/LevelSetup)
+            foreach (var r in GetComponentsInChildren<Renderer>())
+                r.shadowCastingMode = ShadowCastingMode.Off;
+
             IsBeingCollected = false;
             target = null;
             moveSpeed = 0f;
             collectionTimer = 0f;
             _registryIndex = _activeInstances.Count;
             _activeInstances.Add(this);
+            CountsForProgress = true;
         }
 
         private void OnDisable()
