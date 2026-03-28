@@ -1,100 +1,93 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**Space Cleaner** — dual-joystick mobile space shooter in Unity 6 (6000.3.10f1) with URP. Player vacuums space trash and shoots it as projectiles. Target: Android (primary), iOS (later).
 
-## Project Summary
+## Project map
 
-**Space Cleaner** — A dual-joystick mobile space shooter built in Unity 6 (6000.3.10f1) with URP. The player vacuums space trash and shoots it as projectiles. Target platforms: Android (primary), iOS (later).
+@docs/CLAUDE-structure.md
 
-## Unity & Build Configuration
+- `Assets/_Project/` — all game code and assets
+- `Assets/Settings/` — URP pipeline assets and volume profiles (rendering config only)
+- `docs/GDD.md` — single source of truth for game design
+- `docs/tasks/` — M1–M5, M7 milestones; `overview.md` is the status dashboard
+- `docs/plans/` — design and implementation plans
+- `docs/superpowers/specs/` — approved but unimplemented specs
 
-- **Engine:** Unity 6 LTS (6000.3.10f1)
-- **Render Pipeline:** URP 17.3.0 — two quality tiers: `Mobile_RPAsset` (render scale 0.8, per-vertex lighting) and `PC_RPAsset`
-- **Scripting Backend:** IL2CPP (Android), .NET Standard 2.1
-- **Input:** New Input System only (`activeInputHandler = 1`). Legacy Input is disabled.
-- **Color Space:** Linear
-- **Android:** ARM64 only, min SDK 25 (Android 7.1)
-- **Asset Serialization:** Force Text (YAML)
+## Tech stack
 
-## MCP Unity Integration
+Unity 6 LTS · URP 17.3.0 · IL2CPP · New Input System 1.19.0 · .NET Standard 2.1 · Android ARM64 min SDK 25
 
-Unity Editor is connected to Claude Code via MCP Unity on `localhost:8090` (auto-starts). Use the `mcp__mcp-unity__*` tools to interact with scenes, GameObjects, components, materials, and the build pipeline directly. Always prefer MCP tools over manual file editing for scene/prefab changes.
+<important if="you need to run, test, or recompile code">
 
-## Project Structure
+Unity Editor is connected via MCP Unity on `localhost:8090` (auto-starts). Use `mcp__mcp-unity__*` tools — prefer them over manual file edits for scene/prefab changes.
 
-All game assets live under `Assets/_Project/`:
+| Operation | MCP call |
+|---|---|
+| Recompile after C# edits | `mcp__mcp-unity__recompile_scripts(returnWithLogs=true)` |
+| Run EditMode tests | `mcp__mcp-unity__run_tests(testMode="EditMode")` |
+| Run PlayMode tests | `mcp__mcp-unity__run_tests(testMode="PlayMode")` |
+| Run specific test | `mcp__mcp-unity__run_tests(testFilter="Namespace.Class.Method")` |
 
-```
-Assets/_Project/
-├── Scripts/{Boss,Camera,Core,Enemies,Player,Progression,UI}/
-├── Scenes/{BossFight,Gameplay,MainMenu}/
-├── Prefabs/{Enemies,Projectiles,UI}/
-├── Models/{Characters,Planets,Ships,Trash}/
-├── Materials/
-├── Animations/
-├── Audio/{Music,SFX}/
-├── Shaders/
-├── Textures/
-└── UI/
-```
+**MCP quirks:**
+- Listens on IPv6 (`::1:8090`), not IPv4 — curl needs `http://[::1]:8090`
+- Times out during package imports / domain reloads — retry after Unity finishes
+</important>
 
-Keep all new game code and assets inside `Assets/_Project/`. The top-level `Assets/Settings/` contains URP pipeline assets and volume profiles — edit these for rendering config, not game logic.
+<important if="you are creating or modifying C# scripts">
 
-## Key Installed Packages
-
-- `com.unity.render-pipelines.universal` 17.3.0 — URP
-- `com.unity.inputsystem` 1.19.0 — New Input System
-- `com.unity.ugui` 2.0.0 — Canvas UI
-- `com.unity.test-framework` 1.6.0 — Test Runner
-- `com.gamelovers.mcp-unity` — MCP Unity bridge (git package)
-
-**Not yet installed but planned:** TextMeshPro, Cinemachine, DOTween.
-
-## Running Tests
-
-Use the MCP Unity test runner tool:
-```
-mcp__mcp-unity__run_tests(testMode="EditMode")
-mcp__mcp-unity__run_tests(testMode="PlayMode")
-mcp__mcp-unity__run_tests(testFilter="Namespace.ClassName.TestMethod")
-```
-
-## Recompiling Scripts
-
-After writing or editing C# files, trigger recompilation:
-```
-mcp__mcp-unity__recompile_scripts(returnWithLogs=true)
-```
-Always check compilation logs for errors before proceeding.
-
-## C# Coding Conventions
-
-- Place scripts in the appropriate `Assets/_Project/Scripts/{domain}/` subfolder
+- Place scripts in `Assets/_Project/Scripts/{domain}/`
 - Use namespace `SpaceCleaner.{Domain}` (e.g., `SpaceCleaner.Player`, `SpaceCleaner.Core`)
-- Scripts that touch URP shaders or rendering must use URP-compatible APIs (`UniversalRenderPipelineAsset`, `ScriptableRendererFeature`, etc.)
-- Input actions are defined in `Assets/InputSystem_Actions.inputactions` — this is currently the generic template and needs to be replaced with game-specific actions
+- After editing, recompile: `mcp__mcp-unity__recompile_scripts(returnWithLogs=true)`
+</important>
 
-## Git & LFS
+<important if="you are working with physics, collisions, raycasts, or layer masks">
 
-- Binary assets (`.fbx`, `.png`, `.jpg`, `.wav`, `.mp3`, `.ogg`, `.psd`, `.tga`, `.tif`, `.tiff`, `.exr`, `.obj`, `.mp4`, `.jpeg`) are tracked by Git LFS
-- `.unity`, `.prefab`, `.asset`, `.mat` files are text-serialized YAML — not LFS tracked (correct)
-- Generated files (`.csproj`, `.sln`, `Library/`, `Temp/`) are gitignored
+Layers: Player(6), Enemy(7), Trash(8), Projectile(9), Planet(10)
+Tags: Trash, PlayerShip, EnemyShip, Planet, Projectile
+</important>
 
-## Scene Management
+<important if="you are writing rendering, shader, or visual effect code">
 
-- Template scene at `Assets/Scenes/SampleScene.unity` is the only registered scene
-- Game scenes should be created in `Assets/_Project/Scenes/{Gameplay,MainMenu,BossFight}/`
+- Render pipeline: URP 17.3.0 — use URP-compatible APIs (`UniversalRenderPipelineAsset`, `ScriptableRendererFeature`, etc.)
+- Two quality tiers: `Mobile_RPAsset` (render scale 0.8, per-vertex lighting) and `PC_RPAsset`
+- Color space: Linear
+</important>
+
+<important if="you are working with player input or touch controls">
+
+- New Input System only (`activeInputHandler = 1`) — legacy Input is disabled
+- Input actions defined in `Assets/_Project/Input/SpaceCleaner_Actions.inputactions`
+</important>
+
+<important if="you are creating or modifying scenes, prefabs, or GameObjects">
+
+- Active gameplay scene: `Assets/_Project/Scenes/Gameplay/Gameplay.unity`
+- Game scenes live in `Assets/_Project/Scenes/{Gameplay,MainMenu,BossFight}/`
+- `Assets/Scenes/SampleScene.unity` exists but is unused
 - Use MCP tools (`create_scene`, `load_scene`, `save_scene`) for scene operations
+</important>
 
-## Requirements and Task Tracking
+<important if="you are adding, removing, or updating packages or dependencies">
 
-- **GDD:** `docs/GDD.md` — single source of truth for all game design requirements
-- **Tasks:** `docs/tasks/M1-prototype.md` through `M7-release.md` — checklist-based task tracking per milestone
-- **Overview:** `docs/tasks/overview.md` — milestone status dashboard
+Key packages (do not reinstall unless broken):
+- `com.unity.render-pipelines.universal` 17.3.0
+- `com.unity.inputsystem` 1.19.0
+- `com.unity.ugui` 2.0.0 — includes TextMeshPro (no separate install needed)
+- `com.unity.test-framework` 1.6.0
+- `com.unity.cinemachine` 3.1.3
+- `com.gamelovers.mcp-unity` — MCP bridge (git package)
+- DOTween — **NOT on UPM**; install via Unity Asset Store `.unitypackage` only
+</important>
+
+<important if="you are committing, staging, or managing binary assets with git">
+
+@docs/CLAUDE-git.md
+</important>
+
+<important if="you are reading requirements, checking task status, or planning features">
+
+- Game design requirements: `docs/GDD.md`
+- Milestone tasks: `docs/tasks/overview.md` (dashboard), `docs/tasks/M1`–`M5`, `M7`
+- Unimplemented approved specs: player death experience (`docs/superpowers/specs/2026-03-20-player-death-experience-design.md`), opponent balance/anti-stalemate (`docs/superpowers/specs/2026-03-25-opponent-balance-anti-stalemate-design.md`)
 - When code and docs conflict, code is newer — update docs to match
-
-## Known Gaps
-
-- Bundle ID is still the template default (`com.UnityTechnologies.com.unity.template.urpblank`)
-- No custom Tags or Layers defined yet (will need Player, Enemy, Trash, etc.)
-- `Assets/TutorialInfo/` and `Assets/MobileDependencyResolver/` are template artifacts — safe to remove when ready
+</important>

@@ -5,6 +5,11 @@
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "computedHash": "25872a21881a950edc3db1f3329664d60405d539660ce05b3265db2de06a7dfd"
+    },
+    "improve-claude-md": {
+      "source": "dexhorthy/slopfiles",
+      "sourceType": "github",
+      "computedHash": "27e3ef1847732d859cc8c8583ffb9768ebd18804fefae0fde718fe69dbf875d4"
     }
   }
 }
