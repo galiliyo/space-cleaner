@@ -1,7 +1,7 @@
 # Player Death Experience — Design Spec
 
 **Date:** 2026-03-20
-**Status:** Approved
+**Status:** Implemented ✓
 **Scope:** What happens when the player's HP reaches zero during gameplay
 
 ---

@@ -22,10 +22,10 @@
 ## VFX
 
 - [ ] Vacuum collection particle effect (polished)
-- [ ] Projectile trail effects (single shot vs burst differentiation)
+- [x] Projectile trail effects — unified trail on all projectiles, no single/burst differentiation
 - [ ] Combo multiplier escalating visual effects
 - [ ] Citizen celebration confetti/particles
-- [ ] Bot metal ball impact effects
+- [ ] Bot projectile impact effects — replaces metal ball (see M2 decision)
 - [ ] Ship damage effects
 - [ ] Boss defeat explosion/tantrum effect
 - [ ] Burst cooldown power-up animation (polished)
@@ -34,15 +34,15 @@
 
 ## SFX
 
-- [ ] Vacuum whooshing crescendo
-- [ ] Trash impact cartoon bonk sounds
+- [x] Vacuum whooshing crescendo — VacuumStart / VacuumStop (SFXManager.cs)
+- [x] Trash impact cartoon bonk sounds — TrashCollected + ProjectileImpact
 - [ ] Combo ascending musical tones
 - [ ] Citizen cheering and party horns
 - [ ] Ship engine hum
-- [ ] Single shot fire and impact sounds
-- [ ] Burst shot fire sounds (rapid sequence)
-- [ ] Bot metal ball heavy impact sound (10 HP)
-- [ ] UI interaction sounds
+- [x] Single shot fire and impact sounds — PlayerShoot + ProjectileImpact
+- [x] Burst shot fire sounds — same sound as single shot, no differentiation
+- [ ] Bot projectile impact sound — replaces metal ball (see M2 decision)
+- [x] UI interaction sounds — UIClick
 
 > GDD Ref: §9.3 Audio Direction
 
@@ -66,15 +66,15 @@
 
 ## Full HUD
 
-- [ ] Health bar with heart icon and color gradient
-- [ ] Ammo counter with trash bag icon and soft cap indicator
-- [ ] Cleanup progress bar (polished, shows combined %)
+- [ ] Health bar with heart icon and color gradient — bar + gradient done, heart icon pending
+- [x] Ammo counter with trash bag icon and soft cap indicator — functional (icon = art polish)
+- [x] Cleanup progress bar (polished, shows combined %)
 - [ ] Combo multiplier with visual flair
 - [ ] Currency display with coin icon
-- [ ] Opponent health bar
+- [x] Opponent health bar — OpponentBanner.cs
 - [ ] Boss health bar with Lary portrait (sun level)
 - [ ] Aiming cone polish for both shoot buttons
-- [ ] Cooldown indicators for both shoot buttons
+- [x] Cooldown indicators for both shoot buttons — burst cooldown radial fill in GameplayHUD.cs
 - [ ] Responsive layout for different screen sizes
 
 > GDD Ref: §6.1 In-Game HUD

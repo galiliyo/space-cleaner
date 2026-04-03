@@ -11,7 +11,7 @@
 - `docs/GDD.md` — single source of truth for game design
 - `docs/tasks/` — M1–M5, M7 milestones; `overview.md` is the status dashboard
 - `docs/plans/` — design and implementation plans
-- `docs/superpowers/specs/` — approved but unimplemented specs
+- `docs/superpowers/specs/` — design specs (implemented ones marked ✓)
 
 ## Tech stack
 
@@ -88,6 +88,5 @@ Key packages (do not reinstall unless broken):
 
 - Game design requirements: `docs/GDD.md`
 - Milestone tasks: `docs/tasks/overview.md` (dashboard), `docs/tasks/M1`–`M5`, `M7`
-- Unimplemented approved specs: player death experience (`docs/superpowers/specs/2026-03-20-player-death-experience-design.md`), opponent balance/anti-stalemate (`docs/superpowers/specs/2026-03-25-opponent-balance-anti-stalemate-design.md`)
 - When code and docs conflict, code is newer — update docs to match
 </important>

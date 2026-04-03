@@ -2,18 +2,18 @@
 
 **Goal:** Advanced AI opponent behavior, Lary boss fight, health system polish, ammo system, score carry-over.
 
-**Status:** Not Started
+**Status:** In Progress (~30%)
 
 ---
 
 ## Health System
 
-- [ ] Implement player health (20 HP max)
-- [ ] Take damage on trash projectile hit (1 HP per hit)
-- [ ] Take damage on bot metal ball hit (10 HP per hit)
-- [ ] Health bar HUD element (top-left, green→red gradient)
-- [ ] Death handling: lose all ammo, keep cleanup %, respawn
-- [ ] Damage visual feedback (screen flash, ship blink)
+- [x] Implement player health (20 HP max) — Health.cs
+- [x] Take damage on trash projectile hit (1 HP per hit) — Projectile.cs, damage=1
+- [x] Take damage on bot projectile hit (1 HP per hit) — all projectiles unified, no separate metal ball type
+- [x] Health bar HUD element (top-left, green→red gradient) — GameplayHUD.cs
+- [x] Death handling: lose all ammo, keep cleanup %, respawn — PlayerDeathHandler.cs
+- [x] Damage visual feedback — post-death invincibility blink (no per-hit flash)
 
 > GDD Ref: §2.6 Health System
 
@@ -29,8 +29,8 @@
 
 ## Score Carry-Over System
 
-- [ ] Track each defeated opponent's vacuum count
-- [ ] Store defeated opponent data per solar system
+- [x] Track each defeated opponent's vacuum count — AIOpponent.collectedAmmo, transferred to player on death
+- [ ] Store defeated opponent data per solar system — needed for Lary minion spawning
 - [ ] Spawn defeated opponents as Lary's minions at sun level
 - [ ] Minion bots start with stored ammo from their previous defeat
 - [ ] Visual indicator showing carry-over minions vs base minions
@@ -44,7 +44,7 @@
 - [ ] Implement Lary attack patterns
 - [ ] Lary visible health bar (top-center with name/portrait)
 - [ ] Lary minion management: base minions + defeated opponent minions
-- [ ] Minion bots shoot metal balls (10 HP damage)
+- [ ] Minion bots shoot projectiles (same type as player/opponent, 1 HP damage)
 - [ ] Lary flee behavior at low HP (escape to next solar system)
 - [ ] Defeat animation: Lary tantrum → escape animation
 - [ ] Achievement trigger on Lary defeat

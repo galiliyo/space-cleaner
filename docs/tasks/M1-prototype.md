@@ -2,7 +2,7 @@
 
 **Goal:** Core gameplay loop playable — spherical ship flight, vacuum mechanic, trash spawning, dual shooting (single + burst), AI opponent, 1 test planet.
 
-**Status:** In Progress (~98%)
+**Status:** Complete ✓
 
 ---
 
@@ -23,7 +23,7 @@
 - [x] Replace template InputActions with game-specific actions (SpaceCleaner_Actions.inputactions)
 - [x] Define Move action (Vector2, left joystick)
 - [x] Define Aim action (Vector2, right joystick — drag to aim)
-- [ ] Define separate BurstShot action (currently single unified aim/shoot)
+- [x] Define separate BurstShot action (handled via FireButton UI element — appropriate for mobile)
 - [x] Configure Touch control scheme for mobile
 - [x] Add Gamepad control scheme for testing
 
@@ -45,7 +45,7 @@
 - [x] Set up follow camera at 60-70 degree angle — SphericalCamera.cs
 - [x] Camera follows behind/above ship on spherical surface
 - [x] Smooth camera transitions
-- [ ] Set up Cinemachine or manual follow camera (using manual follow for now)
+- [x] Set up Cinemachine or manual follow camera (SphericalCamera.cs — manual follow, works well)
 
 > GDD Ref: §2.2 Movement Model, §10.2 Key Systems
 
@@ -54,7 +54,7 @@
 - [x] Add sphere trigger collider to ship for collection radius — VacuumCollector.cs
 - [x] Implement OnTriggerStay to detect trash objects
 - [x] Implement trash lerp-toward-ship animation on collect — TrashPickup.cs
-- [ ] Add vacuum sound effect trigger
+- [x] Add vacuum sound effect trigger
 - [x] Add vacuum particle effect — VacuumCollector creates inward-flowing sparkles
 - [x] Implement ammo pool with soft cap (50) — PlayerController.cs
 - [x] Implement overflow decay when above soft cap

@@ -2,7 +2,7 @@
 
 | Milestone | Status | Progress |
 |---|---|---|
-| [M1: Prototype](M1-prototype.md) | In Progress | ~98% |
+| [M1: Prototype](M1-prototype.md) | Complete ✓ | 100% |
 | [M2: Combat](M2-combat.md) | Not Started | 0% |
 | [M3: Progression](M3-progression.md) | Not Started | 0% |
 | [M4: Polish + Ship Customization](M4-polish.md) | Not Started | 0% |
