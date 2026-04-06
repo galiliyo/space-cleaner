@@ -11,3 +11,5 @@
 *.suo
 *.user
 .claude/worktrees/
+.plastic/
+Assets/MobileDependencyResolver/

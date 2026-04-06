@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using SpaceCleaner.Core;
 using SpaceCleaner.Player;
+using SpaceCleaner.Boss;
 
 namespace SpaceCleaner.Enemies
 {
@@ -37,6 +38,10 @@ namespace SpaceCleaner.Enemies
         [SerializeField] private float aggressionRange = 30f;
         [SerializeField] private float aggressionHysteresis = 5f;
 
+        [Header("Boss Arena")]
+        public bool isCarryOver = false;
+        public bool recordToCarryOver = true;
+
         [Header("Collision")]
         [SerializeField] private float minSeparation = 5f;
         [SerializeField] private float bounceSpeed = 8f;
@@ -57,6 +62,34 @@ namespace SpaceCleaner.Enemies
 
         public string OpponentName => opponentName;
         public int CollectedAmmo => collectedAmmo;
+
+        /// <summary>
+        /// Configures this opponent for boss arena use. Call after Instantiate, before first Update.
+        /// </summary>
+        public void Configure(Transform planet, float orbitRadius, int startingAmmo, bool recordToCarryOver, GameObject projectilePrefab = null)
+        {
+            this.planet = planet;
+            this.orbitRadius = orbitRadius;
+            this.startingAmmo = startingAmmo;
+            this.collectedAmmo = startingAmmo;
+            this.recordToCarryOver = recordToCarryOver;
+            if (projectilePrefab != null)
+                this.projectilePrefab = projectilePrefab;
+
+            // Auto-find or create fire point (needed for Shoot() to work)
+            if (firePoint == null)
+            {
+                var fp = transform.Find("FirePoint");
+                if (fp == null)
+                {
+                    var fpGO = new UnityEngine.GameObject("FirePoint");
+                    fpGO.transform.SetParent(transform, false);
+                    fpGO.transform.localPosition = UnityEngine.Vector3.forward * 2f;
+                    fp = fpGO.transform;
+                }
+                firePoint = fp;
+            }
+        }
 
         private void Awake()
         {
@@ -290,8 +323,9 @@ namespace SpaceCleaner.Enemies
             if (trash != null && !trash.IsBeingCollected)
             {
                 bool countsForProgress = trash.CountsForProgress;
+                int ammo = trash.AmmoValue;
                 ObjectPool.ReturnOrDestroy(other.gameObject);
-                collectedAmmo++;
+                collectedAmmo += ammo;
                 SFXManager.Instance?.Play(SFXType.AICollectTrash);
                 if (countsForProgress)
                     GameManager.Instance?.RegisterTrashCollected();
@@ -301,6 +335,10 @@ namespace SpaceCleaner.Enemies
         private void OnDeath()
         {
             SFXManager.Instance?.Play(SFXType.AIDeath);
+
+            if (recordToCarryOver)
+                CarryOverData.Record(opponentName, collectedAmmo);
+
             // Transfer collected ammo to player
             var player = FindAnyObjectByType<PlayerController>();
             if (player != null)

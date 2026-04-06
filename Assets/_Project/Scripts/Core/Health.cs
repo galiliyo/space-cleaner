@@ -47,5 +47,16 @@ namespace SpaceCleaner.Core
             currentHealth = maxHealth;
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
         }
+
+        /// <summary>
+        /// Sets max health and resets current health to the new max.
+        /// Use for runtime-created entities (e.g. boss with configurable HP).
+        /// </summary>
+        public void SetMaxHealth(int max)
+        {
+            maxHealth = max;
+            currentHealth = max;
+            OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        }
     }
 }

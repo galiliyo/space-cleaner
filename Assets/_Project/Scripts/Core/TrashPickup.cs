@@ -21,6 +21,9 @@ namespace SpaceCleaner.Core
         /// </summary>
         public bool CountsForProgress { get; set; } = true;
 
+        [SerializeField] private int ammoValue = 1;
+        public int AmmoValue { get => ammoValue; set => ammoValue = value; }
+
         private Transform target;
         private float moveSpeed;
         private float collectionTimer;
@@ -68,7 +71,7 @@ namespace SpaceCleaner.Core
             var player = target.GetComponent<PlayerController>();
             if (player != null)
             {
-                player.AddAmmo(1);
+                player.AddAmmo(ammoValue);
             }
 
             SFXManager.Instance?.Play(SFXType.TrashCollected);
@@ -94,6 +97,7 @@ namespace SpaceCleaner.Core
             _registryIndex = _activeInstances.Count;
             _activeInstances.Add(this);
             CountsForProgress = true;
+            ammoValue = 1;
         }
 
         private void OnDisable()
