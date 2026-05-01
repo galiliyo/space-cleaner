@@ -172,6 +172,15 @@ namespace SpaceCleaner.UI
             return StartCoroutine(FadeOutCoroutine(duration));
         }
 
+        /// <summary>
+        /// Fades alpha to zero without deactivating. Safe to yield on from another object
+        /// because it won't kill itself mid-coroutine.
+        /// </summary>
+        public Coroutine FadeToZero(float duration)
+        {
+            return StartCoroutine(FadeCoroutine(1f, 0f, duration));
+        }
+
         private IEnumerator FadeOutCoroutine(float duration)
         {
             yield return FadeCoroutine(1f, 0f, duration);

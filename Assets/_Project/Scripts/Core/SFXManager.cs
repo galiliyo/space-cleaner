@@ -62,13 +62,16 @@ namespace SpaceCleaner.Core
             lastPlayTime = new Dictionary<SFXType, float>();
 
             Register(SFXType.PlayerShoot, 0.45f, 0.05f, "laser5");
-            Register(SFXType.ProjectileImpact, 0.55f, 0f,
-                "impactMetal_medium_000", "impactMetal_medium_001",
-                "impactMetal_medium_002", "impactMetal_medium_003",
-                "impactMetal_medium_004");
-            Register(SFXType.TrashCollected, 0.5f, 0f, "pepSound3");
-            Register(SFXType.VacuumStart, 0.3f, 0f, "phaserUp4");
-            Register(SFXType.VacuumStop, 0.25f, 0f, "phaserDown1");
+            Register(SFXType.ProjectileImpact, 0.55f, 0.1f,
+                "impactPlate_light_000", "impactPlate_light_001", "impactPlate_light_002",
+                "impactPlate_light_003", "impactPlate_light_004",
+                "impactPlate_medium_000", "impactPlate_medium_001", "impactPlate_medium_002",
+                "impactPlate_medium_003", "impactPlate_medium_004",
+                "impactPlate_heavy_000", "impactPlate_heavy_001", "impactPlate_heavy_002",
+                "impactPlate_heavy_003", "impactPlate_heavy_004");
+            Register(SFXType.TrashCollected, 0.5f, 0.08f, "pepSound3");
+            Register(SFXType.VacuumStart, 0.3f, 0.5f, "phaserUp4");
+            Register(SFXType.VacuumStop, 0.25f, 0.5f, "phaserDown1");
             Register(SFXType.PlayerDamage, 0.7f, 0.1f,
                 "impactPunch_heavy_000", "impactPunch_heavy_001",
                 "impactPunch_heavy_002", "impactPunch_heavy_003",
@@ -79,7 +82,7 @@ namespace SpaceCleaner.Core
                 "impactSoft_medium_000", "impactSoft_medium_001",
                 "impactSoft_medium_002", "impactSoft_medium_003",
                 "impactSoft_medium_004");
-            Register(SFXType.AICollectTrash, 0.3f, 0f, "spaceTrash2");
+            Register(SFXType.AICollectTrash, 0.15f, 0.8f, "spaceTrash2");
             Register(SFXType.LevelComplete, 0.8f, 0f, "threeTone2");
             Register(SFXType.UIClick, 0.6f, 0.1f, "click_003");
         }

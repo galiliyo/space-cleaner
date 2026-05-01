@@ -19,23 +19,24 @@ namespace SpaceCleaner.Enemies
         [SerializeField] private float rotationSpeed = 5f;
 
         [Header("Vacuum")]
-        [SerializeField] private float vacuumRadius = 6f;
+        [SerializeField] private bool canVacuum = false;
+        [SerializeField] private float vacuumRadius = 3.5f;
         [SerializeField] private LayerMask trashLayer;
-        [SerializeField] private int startingAmmo = 30;
+        [SerializeField] private int startingAmmo = 8;
 
         [Header("Combat")]
-        [SerializeField] private float shootRange = 25f;
-        [SerializeField] private float shootCooldown = 1.8f;
-        [SerializeField] private float shootInaccuracy = 4f; // degrees of random spread
+        [SerializeField] private float shootRange = 10f;
+        [SerializeField] private float shootCooldown = 3.5f;
+        [SerializeField] private float shootInaccuracy = 50f; // degrees of random spread
         [SerializeField] private GameObject projectilePrefab;
         [SerializeField] private Transform firePoint;
-        [SerializeField] private float projectileSpeed = 30f;
+        [SerializeField] private float projectileSpeed = 20f;
 
         [Header("Identity")]
         [SerializeField] private string opponentName = "Buzz";
 
         [Header("Behavior")]
-        [SerializeField] private float aggressionRange = 30f;
+        [SerializeField] private float aggressionRange = 20f;
         [SerializeField] private float aggressionHysteresis = 5f;
 
         [Header("Boss Arena")]
@@ -142,6 +143,9 @@ namespace SpaceCleaner.Enemies
         private void UpdateState()
         {
             if (playerTransform == null) return;
+
+            // Without vacuum capability, always stay in combat
+            if (!canVacuum) { currentState = AIState.Combat; return; }
 
             float distToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 
@@ -317,6 +321,7 @@ namespace SpaceCleaner.Enemies
 
         private void OnTriggerEnter(Collider other)
         {
+            if (!canVacuum) return;
             if (((1 << other.gameObject.layer) & trashLayer) == 0) return;
 
             var trash = other.GetComponent<TrashPickup>();

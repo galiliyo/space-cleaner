@@ -20,8 +20,6 @@ namespace SpaceCleaner.Player
         [SerializeField] private float particleLifetime = 0.6f;
 
         private static Shader s_ParticleShader;
-        private static Shader s_FallbackParticleShader;
-
         private static Material s_ParticleMaterial;
 
         private PlayerController playerController;
@@ -30,6 +28,8 @@ namespace SpaceCleaner.Player
         private ParticleSystem vortexRingPS;
         private ParticleSystem vortexGlowPS;
         private int trashInRangeCount;
+        private float vacuumOffDelay;
+        private const float VacuumOffGracePeriod = 0.3f;
 
         private void Awake()
         {
@@ -127,14 +127,16 @@ namespace SpaceCleaner.Player
             // Create a simple additive unlit particle material (URP compatible, shared across instances)
             if (s_ParticleMaterial == null)
             {
-                if (s_ParticleShader == null) s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-                var mat = new Material(s_ParticleShader);
-                if (mat.shader == null || mat.shader.name == "Hidden/InternalErrorShader")
+                if (s_ParticleShader == null)
+                    s_ParticleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                        ?? Shader.Find("Universal Render Pipeline/Unlit")
+                        ?? Shader.Find("Universal Render Pipeline/Lit");
+                if (s_ParticleShader == null)
                 {
-                    // Fallback if URP particles shader not found
-                    if (s_FallbackParticleShader == null) s_FallbackParticleShader = Shader.Find("Particles/Standard Unlit");
-                    mat = new Material(s_FallbackParticleShader);
+                    Debug.LogWarning("[VacuumCollector] No URP shader found — vacuum VFX will be invisible.");
+                    return;
                 }
+                var mat = new Material(s_ParticleShader);
                 mat.SetFloat("_Surface", 1f); // 0 = Opaque, 1 = Transparent
                 mat.SetFloat("_Blend", 1f);   // 0 = Alpha, 1 = Additive
                 mat.SetColor("_BaseColor", Color.white);
@@ -279,19 +281,27 @@ namespace SpaceCleaner.Player
                 if (!anyNearby) trashInRangeCount = 0;
             }
 
-            if (trashInRangeCount > 0 && !vacuumVFX.isPlaying)
+            if (trashInRangeCount > 0)
             {
-                SFXManager.Instance?.Play(VacuumStart);
-                vacuumVFX.Play();
-                if (vortexRingPS != null) vortexRingPS.Play();
-                if (vortexGlowPS != null) vortexGlowPS.Play();
+                vacuumOffDelay = VacuumOffGracePeriod;
+                if (!vacuumVFX.isPlaying)
+                {
+                    SFXManager.Instance?.Play(VacuumStart);
+                    vacuumVFX.Play();
+                    if (vortexRingPS != null) vortexRingPS.Play();
+                    if (vortexGlowPS != null) vortexGlowPS.Play();
+                }
             }
-            else if (trashInRangeCount <= 0 && vacuumVFX.isPlaying)
+            else if (vacuumVFX.isPlaying)
             {
-                SFXManager.Instance?.Play(VacuumStop);
-                vacuumVFX.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                if (vortexRingPS != null) vortexRingPS.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                if (vortexGlowPS != null) vortexGlowPS.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                vacuumOffDelay -= Time.deltaTime;
+                if (vacuumOffDelay <= 0f)
+                {
+                    SFXManager.Instance?.Play(VacuumStop);
+                    vacuumVFX.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    if (vortexRingPS != null) vortexRingPS.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    if (vortexGlowPS != null) vortexGlowPS.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
             }
         }
 

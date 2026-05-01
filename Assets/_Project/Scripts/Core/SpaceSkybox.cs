@@ -62,8 +62,7 @@ namespace SpaceCleaner.Core
             // Check if a skybox material is already assigned in RenderSettings
             var existing = RenderSettings.skybox;
             if (existing != null && existing.shader != null
-                && existing.shader.name.Contains("Skybox")
-                && existing.shader.name != "Skybox/Procedural")
+                && existing.shader.name.Contains("Skybox"))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.Log($"[SpaceSkybox] Using existing skybox material: {existing.name}");

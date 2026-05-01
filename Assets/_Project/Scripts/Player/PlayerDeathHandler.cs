@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using SpaceCleaner.Core;
 using SpaceCleaner.Camera;
+using SpaceCleaner.Enemies;
 using SpaceCleaner.UI;
 
 namespace SpaceCleaner.Player
@@ -48,6 +49,7 @@ namespace SpaceCleaner.Player
         private bool isDying;
 
         private DeathOverlayUI deathOverlay;
+        private GameplayHUD gameplayHUD;
 
         // Procedural SFX generated once
         private AudioClip proceduralExplosionClip;
@@ -59,6 +61,7 @@ namespace SpaceCleaner.Player
             health = GetComponent<Health>();
             movement = GetComponent<SphericalMovement>();
             sphericalCamera = FindAnyObjectByType<SphericalCamera>();
+            gameplayHUD = FindAnyObjectByType<GameplayHUD>();
 
             audioSource = GetComponent<AudioSource>();
             if (audioSource == null)
@@ -147,7 +150,8 @@ namespace SpaceCleaner.Player
                 deathOverlay = CreateDeathOverlay();
 
             // Re-enable death canvas in case it was disabled from a previous respawn
-            var deathCanvas = deathOverlay.GetComponentInParent<Canvas>();
+            // Must pass 'true' to find the canvas when both overlay and canvas are inactive
+            var deathCanvas = deathOverlay.GetComponentInParent<Canvas>(true);
             if (deathCanvas != null)
                 deathCanvas.gameObject.SetActive(true);
 
@@ -168,13 +172,13 @@ namespace SpaceCleaner.Player
 
         private IEnumerator RespawnSequence()
         {
-            // 1. Fade out overlay (run the fade on THIS object to avoid self-deactivation issues)
+            // 1. Fade out overlay — run on THIS coroutine to avoid self-deactivation killing the yield
             if (deathOverlay != null)
             {
-                yield return deathOverlay.FadeOut(0.3f);
-                // Deactivate the entire death canvas — the overlay already set its own GO inactive,
-                // but the parent canvas with its GraphicRaycaster should also be disabled
-                var deathCanvas = deathOverlay.GetComponentInParent<Canvas>();
+                yield return deathOverlay.FadeToZero(0.3f);
+                // Now safely deactivate from here (not from the overlay's own coroutine)
+                deathOverlay.gameObject.SetActive(false);
+                var deathCanvas = deathOverlay.GetComponentInParent<Canvas>(true);
                 if (deathCanvas != null)
                     deathCanvas.gameObject.SetActive(false);
             }
@@ -184,15 +188,24 @@ namespace SpaceCleaner.Player
             playerController.ResetAmmo();
             playerController.IsDead = false;
 
-            // 3. Reposition at death location, slightly above surface
-            Vector3 aboveDeath = deathPosition;
+            // 3. Pick a random safe respawn point 90°-180° from the opponent
+            Vector3 respawnPos = deathPosition;
             if (movement.Planet != null)
             {
-                Vector3 upDir = (deathPosition - movement.Planet.position).normalized;
-                aboveDeath = deathPosition + upDir * dropInHeight;
+                respawnPos = PickSafeRespawnPoint(movement.Planet.position, movement.OrbitRadius);
             }
-            transform.position = aboveDeath;
-            transform.rotation = deathRotation;
+
+            Vector3 respawnUp = movement.Planet != null
+                ? (respawnPos - movement.Planet.position).normalized
+                : Vector3.up;
+            Vector3 aboveRespawn = respawnPos + respawnUp * dropInHeight;
+
+            transform.position = aboveRespawn;
+            // Face a random tangent direction at the new location
+            Vector3 tangent = Vector3.Cross(respawnUp, Random.onUnitSphere).normalized;
+            if (tangent.sqrMagnitude < 0.001f)
+                tangent = Vector3.Cross(respawnUp, Vector3.right).normalized;
+            transform.rotation = Quaternion.LookRotation(tangent, respawnUp);
 
             // Re-enable movement and unpause BEFORE drop-in so deltaTime works
             movement.enabled = true;
@@ -214,14 +227,13 @@ namespace SpaceCleaner.Player
                 float t = Mathf.Clamp01(elapsed / dropInDuration);
                 // Ease-out quadratic
                 float eased = 1f - (1f - t) * (1f - t);
-                transform.position = Vector3.Lerp(aboveDeath, deathPosition, eased);
+                transform.position = Vector3.Lerp(aboveRespawn, respawnPos, eased);
                 yield return null;
             }
-            transform.position = deathPosition;
+            transform.position = respawnPos;
 
             // 6. Re-show HUD
-            var hud = FindAnyObjectByType<GameplayHUD>();
-            if (hud != null) hud.ShowHUD();
+            if (gameplayHUD != null) gameplayHUD.ShowHUD();
 
             // 7. Invincibility window with blinking
             yield return InvincibilityCoroutine();
@@ -272,6 +284,63 @@ namespace SpaceCleaner.Player
             var overlay = overlayGO.AddComponent<DeathOverlayUI>();
             overlay.Initialize(this);
             return overlay;
+        }
+
+        /// <summary>
+        /// Picks the point on the planet surface furthest from all active opponents.
+        /// Samples 20 random candidates and returns the one that maximizes the
+        /// minimum angular distance to any opponent (at least 90° away).
+        /// </summary>
+        private Vector3 PickSafeRespawnPoint(Vector3 planetCenter, float radius)
+        {
+            // Gather all active opponent directions from planet center
+            var opponents = FindObjectsByType<AIOpponent>(FindObjectsSortMode.None);
+            var dangerDirs = new System.Collections.Generic.List<Vector3>(opponents.Length);
+            foreach (var opp in opponents)
+            {
+                if (opp != null && opp.gameObject.activeInHierarchy)
+                    dangerDirs.Add((opp.transform.position - planetCenter).normalized);
+            }
+
+            // Fallback: if no opponents, stay away from where we died
+            if (dangerDirs.Count == 0)
+                dangerDirs.Add((deathPosition - planetCenter).normalized);
+
+            // Sample candidates and pick the one with the best worst-case distance
+            const int samples = 20;
+            const float minAngleDeg = 90f;
+            float minAngleDot = Mathf.Cos(minAngleDeg * Mathf.Deg2Rad); // cos(90°) = 0
+
+            Vector3 bestDir = -dangerDirs[0]; // fallback: opposite the first opponent
+            float bestMinDist = -1f;
+
+            for (int i = 0; i < samples; i++)
+            {
+                Vector3 candidate = Random.onUnitSphere;
+
+                // Find the closest opponent to this candidate (smallest angle = largest dot)
+                float worstDot = -1f; // worst case: dot = -1 means 180° away (best)
+                foreach (var d in dangerDirs)
+                {
+                    float dot = Vector3.Dot(candidate, d);
+                    if (dot > worstDot)
+                        worstDot = dot;
+                }
+
+                // Skip candidates too close to any opponent (< 90°)
+                if (worstDot > minAngleDot)
+                    continue;
+
+                // The more negative worstDot is, the further from the closest opponent
+                float minAngularDist = -worstDot; // flip so higher = better
+                if (minAngularDist > bestMinDist)
+                {
+                    bestMinDist = minAngularDist;
+                    bestDir = candidate;
+                }
+            }
+
+            return planetCenter + bestDir.normalized * radius;
         }
 
         /// <summary>Plays the assigned clip, or falls back to a procedural clip if none assigned.</summary>
@@ -338,10 +407,14 @@ namespace SpaceCleaner.Player
             sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f,
                 AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
 
-            // Use default particle material (works with URP)
             var renderer = vfxGO.GetComponent<ParticleSystemRenderer>();
-            renderer.material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
-            renderer.material.color = explosionColor;
+            var particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                ?? Shader.Find("Universal Render Pipeline/Lit");
+            if (particleShader != null)
+            {
+                renderer.material = new Material(particleShader);
+                renderer.material.color = explosionColor;
+            }
 
             ps.Play();
         }

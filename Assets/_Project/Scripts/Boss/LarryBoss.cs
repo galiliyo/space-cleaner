@@ -12,8 +12,9 @@ namespace SpaceCleaner.Boss
     public class LarryBoss : MonoBehaviour
     {
         [Header("Attack")]
-        [SerializeField] private float fireRate = 3f;
-        [SerializeField] private float trashBallSpeed = 20f;
+        [SerializeField] private float fireRate = 5f;
+        [SerializeField] private float trashBallSpeed = 14f;
+        [SerializeField] private float shootInaccuracy = 15f;
         [SerializeField] private int poolSize = 8;
 
         [Header("Taunts")]
@@ -91,6 +92,11 @@ namespace SpaceCleaner.Boss
 
             Vector3 firePos = transform.position + transform.up * 3f;
             Vector3 dir = (playerTransform.position - firePos).normalized;
+            dir = Quaternion.Euler(
+                UnityEngine.Random.Range(-shootInaccuracy, shootInaccuracy),
+                UnityEngine.Random.Range(-shootInaccuracy, shootInaccuracy),
+                0f) * dir;
+            dir.Normalize();
             Quaternion rot = Quaternion.LookRotation(dir);
 
             GameObject ball = trashBallPool.Get(firePos, rot);

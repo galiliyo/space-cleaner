@@ -7,8 +7,8 @@ namespace SpaceCleaner.Boss
     public class LarryTrashBall : MonoBehaviour
     {
         [SerializeField] private float lifetime = 8f;
-        [SerializeField] private int playerDamage = 5;
-        [SerializeField] private int landingAmmoValue = 10;
+        [SerializeField] private int playerDamage = 3;
+        [SerializeField] private int landingAmmoValue = 15;
 
         private float timer;
         private int shooterLayer = -1;

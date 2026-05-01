@@ -190,7 +190,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 204754905663281041, guid: f06ad6f9174c7634292485b7e1921745, type: 3}
       propertyPath: moveSpeed
-      value: 2.7
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1632043087218348050, guid: f06ad6f9174c7634292485b7e1921745, type: 3}
       propertyPath: trashLayer.m_Bits

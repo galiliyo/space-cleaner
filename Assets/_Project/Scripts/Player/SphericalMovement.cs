@@ -9,9 +9,12 @@ namespace SpaceCleaner.Player
         [SerializeField] private float orbitRadius = 52f; // planet radius + hover height
 
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 2.7f;
+        [SerializeField] private float moveSpeed = 3.5f;
         [Tooltip("Max degrees per second the ship can turn. 50 ≈ 7.2 s for a full 360°.")]
         [SerializeField] private float turnSpeed = 50f;
+
+        [Tooltip("Joystick X values below this are ignored so the ship goes straight.")]
+        [SerializeField] private float steeringDeadZone = 0.3f;
 
         private Vector2 moveInput;
         private Vector3 velocity;
@@ -81,7 +84,11 @@ namespace SpaceCleaner.Player
             }
 
             // Clamp: no backward movement (only forward + strafe)
-            Vector2 clampedInput = new Vector2(moveInput.x, Mathf.Max(0f, moveInput.y));
+            // Apply dead zone to X-axis so small thumb drift doesn't steer the ship
+            float steerX = Mathf.Abs(moveInput.x) < steeringDeadZone
+                ? 0f
+                : Mathf.Sign(moveInput.x) * Mathf.InverseLerp(steeringDeadZone, 1f, Mathf.Abs(moveInput.x));
+            Vector2 clampedInput = new Vector2(steerX, Mathf.Max(0f, moveInput.y));
             if (clampedInput.sqrMagnitude < 0.01f) return;
 
             // Get local "right" and "forward" directions relative to sphere surface

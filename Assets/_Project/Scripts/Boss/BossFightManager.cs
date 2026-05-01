@@ -19,7 +19,7 @@ namespace SpaceCleaner.Boss
         [SerializeField] private float hoverHeight = 2f;
 
         [Header("Larry")]
-        [SerializeField] private int larryMaxHealth = 50;
+        [SerializeField] private int larryMaxHealth = 30;
         [SerializeField] private Vector3 larryOffset = Vector3.up;
 
         [Header("Minions")]

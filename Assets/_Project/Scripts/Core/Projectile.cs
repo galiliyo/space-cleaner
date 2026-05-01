@@ -39,10 +39,12 @@ namespace SpaceCleaner.Core
 
             if (s_TrailMaterial == null)
             {
-                var trailShader = Shader.Find("Universal Render Pipeline/Unlit");
+                var trailShader = Shader.Find("Universal Render Pipeline/Unlit")
+                    ?? Shader.Find("Universal Render Pipeline/Lit");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                if (trailShader == null) Debug.LogError("Projectile: URP Unlit shader not found");
+                if (trailShader == null) Debug.LogError("Projectile: No URP shader found for trail");
 #endif
+                if (trailShader == null) return;
                 s_TrailMaterial = new Material(trailShader);
                 s_TrailMaterial.SetColor("_BaseColor", new Color(1f, 0.8f, 0.2f, 1f));
                 // Set surface type to transparent and blending to additive
@@ -143,6 +145,11 @@ namespace SpaceCleaner.Core
             if (health != null)
             {
                 health.TakeDamage(damage);
+            }
+            else
+            {
+                // Missed a damageable target (hit planet/ground) — recycle back to trash
+                SpawnTrashIfPlayerProjectile();
             }
 
             SFXManager.Instance?.PlayAtPosition(SFXType.ProjectileImpact, transform.position);
