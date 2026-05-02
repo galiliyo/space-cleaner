@@ -43,6 +43,18 @@ namespace SpaceCleaner.Core
             return s_Instance.trashPrefabs[Random.Range(0, s_Instance.trashPrefabs.Length)];
         }
 
+        /// <summary>
+        /// Projects <paramref name="worldPos"/> onto the orbit shell so missed-projectile
+        /// trash always spawns within vacuum reach rather than floating in deep space.
+        /// </summary>
+        public static Vector3 GetOrbitPosition(Vector3 worldPos)
+        {
+            if (s_Instance == null || s_Instance.planet == null) return worldPos;
+            Vector3 dir = (worldPos - s_Instance.planet.position);
+            if (dir.sqrMagnitude < 0.001f) dir = Vector3.up;
+            return s_Instance.planet.position + dir.normalized * (s_Instance.planetRadius + s_Instance.spawnHeight);
+        }
+
         private void Awake()
         {
             s_Instance = this;

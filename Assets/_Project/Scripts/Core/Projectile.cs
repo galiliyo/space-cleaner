@@ -20,6 +20,7 @@ namespace SpaceCleaner.Core
         /// Called after spawning to prevent the projectile from hitting the entity that fired it.
         /// </summary>
         public void SetShooterLayer(int layer) => shooterLayer = layer;
+        public void OverrideDamage(int dmg) => damage = dmg;
 
         private static void EnsureSharedMaterials()
         {
@@ -164,10 +165,12 @@ namespace SpaceCleaner.Core
             var trashPrefab = TrashSpawner.GetRandomTrashPrefab();
             if (trashPrefab == null) return;
 
+            Vector3 spawnPos = TrashSpawner.GetOrbitPosition(transform.position);
+
             var pool = ObjectPool.GetPoolForPrefab(trashPrefab);
             GameObject trash = pool != null
-                ? pool.Get(transform.position, Quaternion.identity)
-                : Object.Instantiate(trashPrefab, transform.position, Quaternion.identity);
+                ? pool.Get(spawnPos, Quaternion.identity)
+                : Object.Instantiate(trashPrefab, spawnPos, Quaternion.identity);
 
             var pickup = trash.GetComponent<TrashPickup>();
             if (pickup != null)

@@ -71,7 +71,11 @@ namespace SpaceCleaner.Core
             var player = target.GetComponent<PlayerController>();
             if (player != null)
             {
-                player.AddAmmo(ammoValue);
+                var receiver = target.GetComponent<BuffReceiver>();
+                int gain = receiver != null
+                    ? Mathf.RoundToInt(ammoValue * receiver.AmmoGainMultiplier)
+                    : ammoValue;
+                player.AddAmmo(gain);
             }
 
             SFXManager.Instance?.Play(SFXType.TrashCollected);

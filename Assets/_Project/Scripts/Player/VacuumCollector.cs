@@ -30,10 +30,13 @@ namespace SpaceCleaner.Player
         private int trashInRangeCount;
         private float vacuumOffDelay;
         private const float VacuumOffGracePeriod = 0.3f;
+        private Core.BuffReceiver buffReceiver;
+        private float lastRadiusMult = 1f;
 
         private void Awake()
         {
             playerController = GetComponent<PlayerController>();
+            buffReceiver = GetComponent<Core.BuffReceiver>() ?? gameObject.AddComponent<Core.BuffReceiver>();
 
             // Add sphere trigger for vacuum collection
             vacuumTrigger = gameObject.AddComponent<SphereCollider>();
@@ -264,12 +267,27 @@ namespace SpaceCleaner.Player
 
         private void LateUpdate()
         {
+            // Apply vacuum radius buff — only resize collider when multiplier changes
+            float radiusMult = buffReceiver != null ? buffReceiver.VacuumRadiusMultiplier : 1f;
+            if (!Mathf.Approximately(radiusMult, lastRadiusMult))
+            {
+                lastRadiusMult = radiusMult;
+                float r = collectRadius * radiusMult;
+                vacuumTrigger.radius = r;
+                if (vacuumVFX != null)
+                {
+                    var s = vacuumVFX.shape;
+                    s.radius = r;
+                }
+            }
+
             // Validate stale count: trash destroyed/pooled may not fire OnTriggerExit
             if (trashInRangeCount > 0)
             {
                 bool anyNearby = false;
                 var pos = transform.position;
-                float rSq = collectRadius * collectRadius * 1.5f;
+                float effectiveR = collectRadius * lastRadiusMult;
+                float rSq = effectiveR * effectiveR * 1.5f;
                 foreach (var trash in TrashPickup.ActiveInstances)
                 {
                     if ((trash.transform.position - pos).sqrMagnitude <= rSq)

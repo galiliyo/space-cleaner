@@ -48,13 +48,17 @@ namespace SpaceCleaner.Enemies
         [SerializeField] private float bounceSpeed = 8f;
 
         private Health health;
+        private Core.BuffReceiver buffReceiver;
         private Transform playerTransform;
         private SphericalMovement playerMovement;
+        private PlayerController playerController;
         private int collectedAmmo;
         private float shootTimer;
         private float trashSearchTimer;
         private Transform cachedNearestTrash;
         private Vector3 bounceVelocity;
+        private int freezeMinAmmo = -1;   // -1 = not frozen; >=0 = freeze until player reaches this ammo count
+        private float freezeDeadline;     // fallback: unfreeze at this Time.time regardless
 
         private static readonly WaitForSeconds s_BlinkWait = new WaitForSeconds(0.1f);
 
@@ -63,6 +67,16 @@ namespace SpaceCleaner.Enemies
 
         public string OpponentName => opponentName;
         public int CollectedAmmo => collectedAmmo;
+
+        /// <summary>
+        /// Freezes the opponent until the player has at least <paramref name="minAmmo"/> ammo,
+        /// or <paramref name="maxDuration"/> seconds pass — whichever comes first.
+        /// </summary>
+        public void FreezeUntilPlayerReady(int minAmmo, float maxDuration)
+        {
+            freezeMinAmmo = minAmmo;
+            freezeDeadline = Time.time + maxDuration;
+        }
 
         /// <summary>
         /// Configures this opponent for boss arena use. Call after Instantiate, before first Update.
@@ -96,6 +110,7 @@ namespace SpaceCleaner.Enemies
         {
             health = GetComponent<Health>();
             health.OnDeath += OnDeath;
+            buffReceiver = GetComponent<Core.BuffReceiver>() ?? gameObject.AddComponent<Core.BuffReceiver>();
         }
 
         private void Start()
@@ -105,6 +120,7 @@ namespace SpaceCleaner.Enemies
             {
                 playerTransform = player.transform;
                 playerMovement = player.GetComponent<SphericalMovement>();
+                playerController = player;
             }
 
             collectedAmmo = startingAmmo;
@@ -120,6 +136,16 @@ namespace SpaceCleaner.Enemies
         private void Update()
         {
             if (health.IsDead) return;
+
+            if (freezeMinAmmo >= 0)
+            {
+                bool playerReady = playerController != null && playerController.AmmoCount >= freezeMinAmmo;
+                bool timedOut = Time.time >= freezeDeadline;
+                if (playerReady || timedOut)
+                    freezeMinAmmo = -1;
+                else
+                    return;
+            }
 
             shootTimer -= Time.deltaTime;
 
@@ -229,7 +255,8 @@ namespace SpaceCleaner.Enemies
             if (projectedDir.sqrMagnitude < 0.001f) return;
 
             // Rotate position around planet
-            float angularSpeed = moveSpeed / orbitRadius;
+            float speedMult = buffReceiver != null ? buffReceiver.SpeedMultiplier : 1f;
+            float angularSpeed = (moveSpeed * speedMult) / orbitRadius;
             float angle = angularSpeed * Time.deltaTime;
 
             Vector3 fromCenter = transform.position - planet.position;
@@ -266,7 +293,11 @@ namespace SpaceCleaner.Enemies
             // Prevent projectile from hitting the AI who fired it
             var projectile = proj.GetComponent<Projectile>();
             if (projectile != null)
+            {
                 projectile.SetShooterLayer(gameObject.layer);
+                if (buffReceiver != null && buffReceiver.DamageMultiplier > 1f)
+                    projectile.OverrideDamage(Mathf.RoundToInt(1 * buffReceiver.DamageMultiplier));
+            }
 
             var rb = proj.GetComponent<Rigidbody>();
             if (rb != null)
@@ -329,6 +360,8 @@ namespace SpaceCleaner.Enemies
             {
                 bool countsForProgress = trash.CountsForProgress;
                 int ammo = trash.AmmoValue;
+                if (buffReceiver != null && buffReceiver.AmmoGainMultiplier > 1f)
+                    ammo = Mathf.RoundToInt(ammo * buffReceiver.AmmoGainMultiplier);
                 ObjectPool.ReturnOrDestroy(other.gameObject);
                 collectedAmmo += ammo;
                 SFXManager.Instance?.Play(SFXType.AICollectTrash);

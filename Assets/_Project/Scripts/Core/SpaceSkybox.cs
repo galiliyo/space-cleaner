@@ -59,10 +59,15 @@ namespace SpaceCleaner.Core
 
         private bool TryFindProjectSkybox()
         {
-            // Check if a skybox material is already assigned in RenderSettings
+            // Try to load a SpaceSkies Free material via Resources first (works in builds too).
+            // If absent, fall through to AssetDatabase search in the editor.
             var existing = RenderSettings.skybox;
-            if (existing != null && existing.shader != null
-                && existing.shader.name.Contains("Skybox"))
+            bool isDefault = existing == null
+                || existing.name == "Default-Skybox"
+                || (existing.shader != null && existing.shader.name == "Skybox/Procedural");
+
+            // If a real custom skybox is already assigned (not Unity's default), keep it.
+            if (!isDefault && existing.shader != null && existing.shader.name.Contains("Skybox"))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.Log($"[SpaceSkybox] Using existing skybox material: {existing.name}");
@@ -71,22 +76,46 @@ namespace SpaceCleaner.Core
             }
 
 #if UNITY_EDITOR
-            // In editor, search for skybox materials in known paths
+            // Prefer SpaceSkies Free first (the user's preferred asset). Within it, prefer 2K — best size for mobile.
+            string[] preferredAssets = {
+                "Assets/SpaceSkies Free/Skybox_3/Purple_2K_Resolution.mat",
+                "Assets/SpaceSkies Free/Skybox_2/Green_2K_Resoution.mat",
+                "Assets/SpaceSkies Free/Skybox_1/Pink_2K_Resolution.mat",
+                "Assets/Planet Earth Free/Materials/SkyboxMaterial.mat",
+            };
+            foreach (var matPath in preferredAssets)
+            {
+                var mat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                if (mat != null && mat.shader != null
+                    && mat.shader.name.Contains("Skybox")
+                    && mat.shader.name != "Skybox/Procedural")
+                {
+                    RenderSettings.skybox = mat;
+                    DynamicGI.UpdateEnvironment();
+                    Debug.Log($"[SpaceSkybox] Found skybox material at: {matPath}");
+                    return true;
+                }
+            }
+
+            // Fallback: scan known folders for any Skybox/* material.
             string[] searchPaths = {
-                "Assets/_Project/Materials/Skybox",
                 "Assets/SpaceSkies Free",
+                "Assets/Planet Earth Free/Materials",
+                "Assets/_Project/Materials/Skybox",
                 "Assets/Skybox",
                 "Assets/Materials"
             };
-
             foreach (var path in searchPaths)
             {
+                if (!UnityEditor.AssetDatabase.IsValidFolder(path)) continue;
                 string[] guids = UnityEditor.AssetDatabase.FindAssets("t:Material", new[] { path });
                 foreach (var guid in guids)
                 {
                     var matPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                     var mat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(matPath);
-                    if (mat != null && mat.shader != null && mat.shader.name.Contains("Skybox"))
+                    if (mat != null && mat.shader != null
+                        && mat.shader.name.Contains("Skybox")
+                        && mat.shader.name != "Skybox/Procedural")
                     {
                         RenderSettings.skybox = mat;
                         DynamicGI.UpdateEnvironment();
@@ -238,6 +267,23 @@ namespace SpaceCleaner.Core
             RenderSettings.ambientLight = _ambientColor;
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
             RenderSettings.fog = false;
+
+            // In URP the pipeline reads backgroundType, not Camera.clearFlags.
+            // Set both so the skybox material actually renders.
+            var cam = UnityEngine.Camera.main;
+            if (cam == null) return;
+
+            cam.clearFlags = CameraClearFlags.Skybox;
+
+            // URP ignores clearFlags and reads backgroundType from UniversalAdditionalCameraData.
+            // Reflection avoids a hard assembly dependency.
+            var camData = cam.GetComponent("UniversalAdditionalCameraData");
+            if (camData != null)
+            {
+                var prop = camData.GetType().GetProperty("backgroundType");
+                if (prop != null)
+                    prop.SetValue(camData, System.Enum.ToObject(prop.PropertyType, 0)); // 0 = Skybox
+            }
         }
 
         private void OnDestroy()

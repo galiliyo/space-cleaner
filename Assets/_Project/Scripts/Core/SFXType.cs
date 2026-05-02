@@ -13,6 +13,7 @@ namespace SpaceCleaner.Core
         AIPlayerBounce,
         AICollectTrash,
         LevelComplete,
-        UIClick
+        UIClick,
+        BuffCollected
     }
 }

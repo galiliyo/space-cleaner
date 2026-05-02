@@ -27,6 +27,7 @@ namespace SpaceCleaner.Player
 
         private PlayerController playerController;
         private SphericalMovement sphericalMovement;
+        private Core.BuffReceiver buffReceiver;
         private float singleShotTimer;
         private float autoFireTimer;
         private float aimHoldTime;
@@ -47,6 +48,7 @@ namespace SpaceCleaner.Player
         {
             playerController = GetComponent<PlayerController>();
             sphericalMovement = GetComponent<SphericalMovement>();
+            buffReceiver = GetComponent<Core.BuffReceiver>() ?? gameObject.AddComponent<Core.BuffReceiver>();
             burstRemaining = burstShotCount;
 
             // Auto-create fire point if not assigned
@@ -188,7 +190,11 @@ namespace SpaceCleaner.Player
             // Prevent projectile from hitting the player who fired it
             var projectile = proj.GetComponent<Projectile>();
             if (projectile != null)
+            {
                 projectile.SetShooterLayer(gameObject.layer);
+                if (buffReceiver != null && buffReceiver.DamageMultiplier > 1f)
+                    projectile.OverrideDamage(Mathf.RoundToInt(1 * buffReceiver.DamageMultiplier));
+            }
 
             var rb = proj.GetComponent<Rigidbody>();
             if (rb != null)

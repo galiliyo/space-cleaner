@@ -211,6 +211,10 @@ namespace SpaceCleaner.Player
             movement.enabled = true;
             GameManager.Instance?.ResumeGame();
 
+            // Freeze opponents immediately — before drop-in so they can't attack during the animation
+            foreach (var opp in FindObjectsByType<AIOpponent>(FindObjectsSortMode.None))
+                opp.FreezeUntilPlayerReady(minAmmo: 3, maxDuration: 30f);
+
             // 4. Snap camera to player before drop-in so it doesn't fly in from space
             if (sphericalCamera != null)
             {

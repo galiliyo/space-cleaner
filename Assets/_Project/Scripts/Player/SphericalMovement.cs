@@ -9,7 +9,7 @@ namespace SpaceCleaner.Player
         [SerializeField] private float orbitRadius = 52f; // planet radius + hover height
 
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 3.5f;
+        [SerializeField] private float moveSpeed = 4.375f;
         [Tooltip("Max degrees per second the ship can turn. 50 ≈ 7.2 s for a full 360°.")]
         [SerializeField] private float turnSpeed = 50f;
 
@@ -19,6 +19,7 @@ namespace SpaceCleaner.Player
         private Vector2 moveInput;
         private Vector3 velocity;
         private Vector3 bounceVelocity;
+        private Core.BuffReceiver buffReceiver;
 
         [SerializeField] private float bounceDrag = 6f;
 
@@ -28,6 +29,11 @@ namespace SpaceCleaner.Player
 
         public Transform Planet => planet;
         public float OrbitRadius => orbitRadius;
+
+        private void Awake()
+        {
+            buffReceiver = GetComponent<Core.BuffReceiver>() ?? gameObject.AddComponent<Core.BuffReceiver>();
+        }
 
         public void SetPlanet(Transform planetTransform, float radius)
         {
@@ -103,7 +109,8 @@ namespace SpaceCleaner.Player
             Vector3 moveDir = (forward * clampedInput.y + right * clampedInput.x).normalized;
 
             // Angular velocity on sphere surface
-            float angularSpeed = moveSpeed / orbitRadius; // radians per second
+            float effectiveSpeed = moveSpeed * (buffReceiver != null ? buffReceiver.SpeedMultiplier : 1f);
+            float angularSpeed = effectiveSpeed / orbitRadius; // radians per second
             float angle = angularSpeed * Time.deltaTime;
 
             // Rotate position around planet center
