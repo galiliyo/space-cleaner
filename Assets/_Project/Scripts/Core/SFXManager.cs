@@ -85,6 +85,92 @@ namespace SpaceCleaner.Core
             Register(SFXType.AICollectTrash, 0.15f, 0.8f, "spaceTrash2");
             Register(SFXType.LevelComplete, 0.8f, 0f, "threeTone2");
             Register(SFXType.UIClick, 0.6f, 0.1f, "click_003");
+
+            // Procedural buff SFX — generated at startup so they play without needing asset imports.
+            RegisterClip(SFXType.BuffCollected, 0.55f, 0f, GenerateBuffCollectedClip());
+            RegisterClip(SFXType.BuffExpiring, 0.40f, 0.5f, GenerateBuffExpiringClip());
+            RegisterClip(SFXType.BuffExpired,  0.45f, 0f, GenerateBuffExpiredClip());
+        }
+
+        private void RegisterClip(SFXType type, float volume, float cooldown, AudioClip clip)
+        {
+            entries[type] = new SFXEntry
+            {
+                clips = clip != null ? new[] { clip } : System.Array.Empty<AudioClip>(),
+                volume = volume,
+                pitchMin = 0.98f,
+                pitchMax = 1.02f,
+                cooldown = cooldown
+            };
+            lastPlayTime[type] = -999f;
+        }
+
+        // ── Procedural buff clips ─────────────────────────────────────────
+        // Each is a short stand-alone synth tone composed of sine waves with an envelope.
+
+        private static AudioClip GenerateBuffCollectedClip()
+        {
+            // Bright rising arpeggio: A5 → C#6 → E6, ~0.3s total. Triumphant pickup feel.
+            const int rate = 22050;
+            float duration = 0.3f;
+            int n = Mathf.RoundToInt(rate * duration);
+            float[] s = new float[n];
+            float[] notes = { 880f, 1108f, 1318f }; // A5, C#6, E6
+            for (int i = 0; i < n; i++)
+            {
+                float t = (float)i / rate;
+                int seg = Mathf.Clamp((int)(t / (duration / notes.Length)), 0, notes.Length - 1);
+                float local = (t - seg * (duration / notes.Length)) / (duration / notes.Length);
+                float env = Mathf.Sin(local * Mathf.PI); // attack-release envelope per note
+                float wave = Mathf.Sin(2f * Mathf.PI * notes[seg] * t)
+                           + 0.4f * Mathf.Sin(2f * Mathf.PI * notes[seg] * 2f * t); // slight harmonic
+                s[i] = wave * env * 0.55f;
+            }
+            return ClipFromSamples("BuffCollected", s, rate);
+        }
+
+        private static AudioClip GenerateBuffExpiringClip()
+        {
+            // Short two-tone warning chirp at high pitch — "tick tick" feel.
+            const int rate = 22050;
+            float duration = 0.18f;
+            int n = Mathf.RoundToInt(rate * duration);
+            float[] s = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float t = (float)i / rate;
+                float env = Mathf.Exp(-t * 14f); // fast decay
+                float freq = t < duration * 0.5f ? 1500f : 1200f;
+                s[i] = Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.6f;
+            }
+            return ClipFromSamples("BuffExpiring", s, rate);
+        }
+
+        private static AudioClip GenerateBuffExpiredClip()
+        {
+            // Descending power-down sweep, ~0.45s.
+            const int rate = 22050;
+            float duration = 0.45f;
+            int n = Mathf.RoundToInt(rate * duration);
+            float[] s = new float[n];
+            float phase = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                float t = (float)i / rate;
+                float freq = Mathf.Lerp(700f, 180f, t / duration);
+                phase += 2f * Mathf.PI * freq / rate;
+                float env = 1f - (t / duration); // linear fade-out
+                float wave = Mathf.Sin(phase) + 0.3f * Mathf.Sin(phase * 0.5f);
+                s[i] = wave * env * 0.55f;
+            }
+            return ClipFromSamples("BuffExpired", s, rate);
+        }
+
+        private static AudioClip ClipFromSamples(string name, float[] samples, int sampleRate)
+        {
+            var clip = AudioClip.Create(name, samples.Length, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
         }
 
         private void Register(SFXType type, float volume, float cooldown, params string[] clipNames)

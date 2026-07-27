@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using SpaceCleaner.Player;
 using SpaceCleaner.Enemies;
+using SpaceCleaner.Core;
 
 namespace SpaceCleaner.UI
 {
@@ -25,10 +26,20 @@ namespace SpaceCleaner.UI
         [SerializeField] private float trashDotSize = 4f;
         [SerializeField] private float opponentDotSize = 8f;
         [SerializeField] private float playerDotSize = 6f;
+        [SerializeField] private float buffIconSize = 16f;
+
+        // Buff colors must match BuffPickup
+        private static readonly Color[] s_BuffColors =
+        {
+            new Color(0.2f, 0.8f, 1.0f),
+            new Color(0.2f, 1.0f, 0.4f),
+            new Color(1.0f, 0.45f, 0.1f),
+        };
 
         private Image[] trashDots;
         private Image opponentDot;
         private RectTransform playerDot;
+        private Image[] buffIcons; // one slot per BuffType (3 total)
         private float updateTimer;
         private Transform opponentTransform;
         private float radarRadius;
@@ -85,6 +96,18 @@ namespace SpaceCleaner.UI
                 var go = CreateDotObject($"TrashDot_{i}", trashColor, trashDotSize);
                 trashDots[i] = go.GetComponent<Image>();
                 trashDots[i].enabled = false;
+            }
+
+            // Buff icons (one slot per BuffType — same procedural sprites the world ring uses)
+            buffIcons = new Image[3];
+            for (int i = 0; i < 3; i++)
+            {
+                var type = (BuffType)i;
+                var go   = CreateDotObject($"BuffIcon_{type}", s_BuffColors[i], buffIconSize);
+                var img  = go.GetComponent<Image>();
+                img.sprite = BuffIcons.GetSprite(type);
+                img.enabled = false;
+                buffIcons[i] = img;
             }
         }
 
@@ -165,6 +188,26 @@ namespace SpaceCleaner.UI
             for (int i = dotIndex; i < maxTrashDots; i++)
             {
                 trashDots[i].enabled = false;
+            }
+
+            // Update buff icons — one icon per BuffType, hidden if no pickup of that type is active
+            // or if the active pickup is out of radar range.
+            for (int i = 0; i < 3; i++)
+                if (buffIcons[i] != null) buffIcons[i].enabled = false;
+
+            var buffs = BuffPickup.ActiveInstances;
+            for (int i = 0; i < buffs.Count; i++)
+            {
+                var buff = buffs[i];
+                if (buff == null) continue;
+                int slot = (int)buff.Type;
+                if (slot < 0 || slot >= 3 || buffIcons[slot] == null) continue;
+
+                Vector2 pos = WorldToRadar(buff.transform.position, playerUp, playerForward, playerRight, cosRange);
+                if (pos.sqrMagnitude > 1.01f) continue; // skip if out of range
+
+                buffIcons[slot].enabled = true;
+                buffIcons[slot].rectTransform.anchoredPosition = pos * radarRadius;
             }
         }
 

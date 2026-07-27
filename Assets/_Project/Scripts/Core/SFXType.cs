@@ -14,6 +14,8 @@ namespace SpaceCleaner.Core
         AICollectTrash,
         LevelComplete,
         UIClick,
-        BuffCollected
+        BuffCollected,
+        BuffExpiring,
+        BuffExpired
     }
 }
