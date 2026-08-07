@@ -15,12 +15,20 @@ namespace SpaceCleaner.Core
 
         private float timer;
         private int shooterLayer = -1;
+        private int defaultDamage;
 
         /// <summary>
         /// Called after spawning to prevent the projectile from hitting the entity that fired it.
         /// </summary>
         public void SetShooterLayer(int layer) => shooterLayer = layer;
-        public void OverrideDamage(int dmg) => damage = dmg;
+
+        /// <summary>
+        /// Scales damage relative to the prefab-authored value. Safe on pooled instances:
+        /// OnEnable restores the default on every retrieval, so a buffed shot cannot leak
+        /// its damage into the next user of this instance.
+        /// </summary>
+        public void ApplyDamageMultiplier(float multiplier) =>
+            damage = Mathf.Max(1, Mathf.RoundToInt(defaultDamage * multiplier));
 
         private static void EnsureSharedMaterials()
         {
@@ -62,6 +70,10 @@ namespace SpaceCleaner.Core
 
         private void Awake()
         {
+            // Cache the prefab-authored damage before any buff can override it.
+            // Awake always runs before the first OnEnable, including on pooled instances.
+            defaultDamage = damage;
+
             EnsureSharedMaterials();
 
             // --- Scale up for visibility ---
@@ -110,6 +122,7 @@ namespace SpaceCleaner.Core
         {
             timer = lifetime;
             shooterLayer = -1;
+            damage = defaultDamage; // clear any buff override from this instance's previous life
 
             // Reset velocity so stale motion from a previous life doesn't carry over
             var rb = GetComponent<Rigidbody>();
@@ -137,6 +150,13 @@ namespace SpaceCleaner.Core
 
         private void OnTriggerEnter(Collider other)
         {
+            // Sensor volumes are never hitboxes. VacuumCollector adds a 5-unit trigger sphere
+            // to the player root — the same GameObject that carries Health — so without this
+            // guard damage resolves through GetComponentInParent<Health>() and every shot
+            // passing within 7.5 world units "hits" while visibly missing the ship.
+            // Both ships carry a non-trigger capsule, so real hits still register.
+            if (other.isTrigger) return;
+
             if (((1 << other.gameObject.layer) & hitLayers) == 0) return;
 
             // Don't hit the entity that fired us

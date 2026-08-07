@@ -40,6 +40,11 @@ namespace SpaceCleaner.Boss
 
         private void OnTriggerEnter(Collider other)
         {
+            // Sensor volumes are never hitboxes — see the same guard in Projectile.
+            // Without it Larry's trash balls damage the player through the vacuum trigger,
+            // which is also the one threat the post-respawn invincibility window has to survive.
+            if (other.isTrigger) return;
+
             int otherLayer = other.gameObject.layer;
 
             // Don't hit the entity that fired us (Larry, Enemy layer 7)

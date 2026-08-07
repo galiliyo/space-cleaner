@@ -296,7 +296,7 @@ namespace SpaceCleaner.Enemies
             {
                 projectile.SetShooterLayer(gameObject.layer);
                 if (buffReceiver != null && buffReceiver.DamageMultiplier > 1f)
-                    projectile.OverrideDamage(Mathf.RoundToInt(1 * buffReceiver.DamageMultiplier));
+                    projectile.ApplyDamageMultiplier(buffReceiver.DamageMultiplier);
             }
 
             var rb = proj.GetComponent<Rigidbody>();

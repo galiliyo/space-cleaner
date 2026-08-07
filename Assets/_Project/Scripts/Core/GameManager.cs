@@ -10,6 +10,7 @@ namespace SpaceCleaner.Core
         [SerializeField] private int totalTrashCount;
         [SerializeField] private int collectedTrashCount;
         [SerializeField] private bool opponentAlive = true;
+        private bool levelCompleted;
 
         [Header("Completion")]
         [Tooltip("Fraction of trash that must be collected to win (0-1). Default 0.8 = 80%.")]
@@ -43,6 +44,7 @@ namespace SpaceCleaner.Core
             totalTrashCount = trashCount;
             collectedTrashCount = 0;
             opponentAlive = true;
+            levelCompleted = false;
             OnCleanupChanged?.Invoke(0f);
         }
 
@@ -62,11 +64,15 @@ namespace SpaceCleaner.Core
 
         private void CheckLevelComplete()
         {
-            if (IsLevelComplete)
-            {
-                SFXManager.Instance?.Play(SFXType.LevelComplete);
-                OnLevelComplete?.Invoke();
-            }
+            // IsLevelComplete is a "currently true" predicate, but OnLevelComplete means
+            // "this just happened" — so it needs a latch here on the emitter side. Without it
+            // every later RegisterTrashCollected re-fires the event, restacking the HUD
+            // celebration coroutine, confetti and SFX. Cleared in InitializeLevel.
+            if (levelCompleted || !IsLevelComplete) return;
+
+            levelCompleted = true;
+            SFXManager.Instance?.Play(SFXType.LevelComplete);
+            OnLevelComplete?.Invoke();
         }
 
         public void NotifyPlayerDeath()

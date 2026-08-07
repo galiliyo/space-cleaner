@@ -12,6 +12,13 @@ namespace SpaceCleaner.Core
         public float HealthNormalized => (float)currentHealth / maxHealth;
         public bool IsDead => currentHealth <= 0;
 
+        /// <summary>
+        /// While true, TakeDamage is ignored. Owned by whoever sets it — currently the
+        /// post-respawn invincibility window in PlayerDeathHandler, which clears it in a
+        /// finally block so an interrupted coroutine can't leave the player permanently immune.
+        /// </summary>
+        public bool IsInvulnerable { get; set; }
+
         public event System.Action<int, int> OnHealthChanged; // current, max
         public event System.Action OnDeath;
 
@@ -22,7 +29,7 @@ namespace SpaceCleaner.Core
 
         public void TakeDamage(int amount)
         {
-            if (IsDead) return;
+            if (IsDead || IsInvulnerable) return;
             currentHealth = Mathf.Max(0, currentHealth - amount);
             if (gameObject.layer == 6) // Player layer
                 SFXManager.Instance?.Play(SFXType.PlayerDamage);

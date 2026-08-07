@@ -249,21 +249,35 @@ namespace SpaceCleaner.Player
             var renderers = GetComponentsInChildren<Renderer>();
             bool visible = true;
 
-            while (elapsed < invincibilityDuration)
+            // The blink is the *tell*; this flag is what actually grants immunity.
+            // finally guarantees it clears even if the coroutine is stopped early
+            // (second death, scene unload) — otherwise the player stays immortal.
+            health.IsInvulnerable = true;
+            try
             {
-                elapsed += Time.deltaTime;
+                while (elapsed < invincibilityDuration)
+                {
+                    // Advance by the wait below, not Time.deltaTime — the loop yields for
+                    // blinkInterval each pass, so charging deltaTime made the window run
+                    // blinkInterval/deltaTime times too long (~12s instead of 2s at 60fps).
+                    elapsed += blinkInterval;
 
-                // Blink all renderers
-                visible = !visible;
-                foreach (var r in renderers)
-                    r.enabled = visible;
+                    // Blink all renderers
+                    visible = !visible;
+                    foreach (var r in renderers)
+                        r.enabled = visible;
 
-                yield return new WaitForSeconds(blinkInterval);
+                    yield return new WaitForSeconds(blinkInterval);
+                }
             }
+            finally
+            {
+                health.IsInvulnerable = false;
 
-            // Ensure visible at end
-            foreach (var r in renderers)
-                r.enabled = true;
+                // Ensure visible at end
+                foreach (var r in renderers)
+                    r.enabled = true;
+            }
         }
 
         private DeathOverlayUI CreateDeathOverlay()
