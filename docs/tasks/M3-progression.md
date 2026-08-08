@@ -2,9 +2,19 @@
 
 **Goal:** Full solar system playable — multiple planet types, progression system, save/load, citizen rewards, combo system.
 
-**Status:** Not Started
+**Status:** In Progress (core foundation)
 
 ---
+
+## Combo System
+
+- [x] Implement combo counter (2-second window between pickups) — ComboManager.cs
+- [x] Combo multiplier display on HUD (center) — ComboUI.cs
+- [x] Escalating visual effects (x2, x5, x10, etc.) — ComboUI.cs tier color/font escalation
+- [x] Combo reset after 2 seconds of no collection — ComboManager.cs
+- [x] Combo bonus applied to citizen currency rewards — ProgressionManager.CalculateCitizenReward
+
+> GDD Ref: §2.5 Combo System
 
 ## Solar System Structure
 
@@ -32,44 +42,34 @@
 - [ ] Camera shift to planet surface on level completion
 - [ ] Citizen character designs per planet type (placeholder)
 - [ ] Celebration animation (confetti, cheering, "Thank You!")
-- [ ] Currency calculation based on planet size and performance
+- [x] Currency calculation based on planet size and performance — ProgressionManager.CalculateCitizenReward (cleanup% + combo)
 - [ ] Currency award and display
 
 > GDD Ref: §3.6 Citizen Rewards
 
 ## In-Game Currency
 
-- [ ] Currency tracking (persistent across sessions)
+- [x] Currency tracking (persistent across sessions) — CurrencyManager.cs + SaveData
 - [ ] Currency display on HUD (coin icon)
-- [ ] Currency earned from citizen rewards
-- [ ] Currency storage in save system
+- [x] Currency earned from citizen rewards — ProgressionManager.HandleLevelComplete
+- [x] Currency storage in save system — SaveSystem (JSON)
 
 > GDD Ref: §3.7 In-Game Currency
 
-## Combo System
-
-- [ ] Implement combo counter (2-second window between pickups)
-- [ ] Combo multiplier display on HUD (center)
-- [ ] Escalating visual effects (x2, x5, x10, etc.)
-- [ ] Combo reset after 2 seconds of no collection
-- [ ] Combo bonus applied to citizen currency rewards
-
-> GDD Ref: §2.5 Combo System
-
 ## Save/Load System
 
-- [ ] Define save data structure (solar system, planet, currency, achievements, opponent carry-over)
-- [ ] Implement save (JSON serialization or PlayerPrefs)
-- [ ] Implement load on game start
-- [ ] Auto-save on planet completion and boss defeat
+- [x] Define save data structure (solar system, planet, currency, achievements, opponent carry-over) — SaveData.cs
+- [x] Implement save (JSON serialization or PlayerPrefs) — SaveSystem.cs (JSON, atomic write)
+- [x] Implement load on game start — ProgressionManager.Awake
+- [x] Auto-save on planet completion and boss defeat — ProgressionManager (HandleLevelComplete, RecordBossDefeated)
 
 > GDD Ref: §10.1 Technology Stack
 
 ## Progression Manager
 
-- [ ] Track current solar system and planet index
-- [ ] Track per-planet cleanup progress (combined player + opponent)
-- [ ] Track opponent defeated state and carry-over data
+- [x] Track current solar system and planet index — SaveData.currentSolarSystem / currentPlanetIndex
+- [x] Track per-planet cleanup progress (combined player + opponent) — GameManager.CleanupPercentage
+- [x] Track opponent defeated state and carry-over data — SaveData.carryOver + RecordOpponentDefeated
 - [ ] Handle progression unlocks
 - [ ] Manage game state transitions (planet → planet → boss → next system)
 
