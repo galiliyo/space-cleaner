@@ -79,6 +79,8 @@ namespace SpaceCleaner.Core
             }
 
             SFXManager.Instance?.Play(SFXType.TrashCollected);
+            if (player != null)
+                ComboManager.Instance?.RegisterPickup();
             if (CountsForProgress)
                 GameManager.Instance?.RegisterTrashCollected();
             ObjectPool.ReturnOrDestroy(gameObject);
@@ -102,6 +104,10 @@ namespace SpaceCleaner.Core
             _activeInstances.Add(this);
             CountsForProgress = true;
             ammoValue = 1;
+            
+            // Ensure sparkle component exists
+            if (GetComponent<TrashSparkle>() == null)
+                gameObject.AddComponent<TrashSparkle>();
         }
 
         private void OnDisable()

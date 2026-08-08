@@ -2,7 +2,7 @@
 
 **Goal:** Advanced AI opponent behavior, Lary boss fight, health system polish, ammo system, score carry-over.
 
-**Status:** In Progress (~30%)
+**Status:** In Progress (~70%)
 
 ---
 
@@ -30,21 +30,21 @@
 ## Score Carry-Over System
 
 - [x] Track each defeated opponent's vacuum count — AIOpponent.collectedAmmo, transferred to player on death
-- [ ] Store defeated opponent data per solar system — needed for Lary minion spawning
-- [ ] Spawn defeated opponents as Lary's minions at sun level
-- [ ] Minion bots start with stored ammo from their previous defeat
+- [x] Store defeated opponent data per solar system — Boss/CarryOverData.cs (in-memory list, Record/GetAndClear)
+- [x] Spawn defeated opponents as Lary's minions at sun level — BossFightManager reads CarryOverData
+- [x] Minion bots start with stored ammo from their previous defeat — BossFightManager.SpawnMinions(name, ammo)
 - [ ] Visual indicator showing carry-over minions vs base minions
 
 > GDD Ref: §3.3 Score Carry-Over System
 
 ## Lary Boss Fight (Sun Level)
 
-- [ ] Create Lary prefab with placeholder model
-- [ ] Create sun boss arena with trash (cleanup still required)
-- [ ] Implement Lary attack patterns
+- [x] Create Lary prefab with placeholder model — Boss/LarryBoss.cs (+ RequireComponent Health)
+- [x] Create sun boss arena with trash (cleanup still required) — Boss/BossFightManager.cs
+- [x] Implement Lary attack patterns — LarryBoss fireRate + LarryTrashBall projectiles
 - [ ] Lary visible health bar (top-center with name/portrait)
-- [ ] Lary minion management: base minions + defeated opponent minions
-- [ ] Minion bots shoot projectiles (same type as player/opponent, 1 HP damage)
+- [x] Lary minion management: base minions + defeated opponent minions — BossFightManager (baseMinions + carry-over)
+- [x] Minion bots shoot projectiles (same type as player/opponent, 1 HP damage)
 - [ ] Lary flee behavior at low HP (escape to next solar system)
 - [ ] Defeat animation: Lary tantrum → escape animation
 - [ ] Achievement trigger on Lary defeat
@@ -53,9 +53,9 @@
 
 ## Lary Personality
 
-- [ ] Speech bubble system for taunts
-- [ ] 5-10 taunt lines per solar system
+- [x] Speech bubble system for taunts — LarryBoss speechCanvas + TauntText
+- [x] 5-10 taunt lines per solar system — LarryBoss.tauntLines (5 lines)
 - [ ] Tantrum animation on defeat
-- [ ] Taunt trigger logic (periodic, HP threshold, etc.)
+- [x] Taunt trigger logic (periodic, HP threshold, etc.) — LarryBoss tauntMinInterval/tauntMaxInterval periodic trigger
 
 > GDD Ref: §4.4 Lary's Personality

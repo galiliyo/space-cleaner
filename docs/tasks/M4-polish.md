@@ -2,7 +2,7 @@
 
 **Goal:** Art, audio, UI complete, ship color customization — toon shading, VFX, SFX, music, HUD, menus, achievements, color picker.
 
-**Status:** Not Started
+**Status:** In Progress (~35%)
 
 ---
 
@@ -23,8 +23,8 @@
 
 - [ ] Vacuum collection particle effect (polished)
 - [x] Projectile trail effects — unified trail on all projectiles, no single/burst differentiation
-- [ ] Combo multiplier escalating visual effects
-- [ ] Citizen celebration confetti/particles
+- [x] Combo multiplier escalating visual effects — ComboUI.cs (tier color/font escalation + pop)
+- [x] Citizen celebration confetti/particles — GameplayHUD.SpawnConfettiEffect on level complete
 - [ ] Bot projectile impact effects — replaces metal ball (see M2 decision)
 - [ ] Ship damage effects
 - [ ] Boss defeat explosion/tantrum effect
@@ -36,7 +36,7 @@
 
 - [x] Vacuum whooshing crescendo — VacuumStart / VacuumStop (SFXManager.cs)
 - [x] Trash impact cartoon bonk sounds — TrashCollected + ProjectileImpact
-- [ ] Combo ascending musical tones
+- [ ] Combo ascending musical tones — ComboUp chirp exists (SFXManager), needs full ascending scale
 - [ ] Citizen cheering and party horns
 - [ ] Ship engine hum
 - [x] Single shot fire and impact sounds — PlayerShoot + ProjectileImpact
@@ -69,7 +69,7 @@
 - [ ] Health bar with heart icon and color gradient — bar + gradient done, heart icon pending
 - [x] Ammo counter with trash bag icon and soft cap indicator — functional (icon = art polish)
 - [x] Cleanup progress bar (polished, shows combined %)
-- [ ] Combo multiplier with visual flair
+- [x] Combo multiplier with visual flair — ComboUI.cs
 - [ ] Currency display with coin icon
 - [x] Opponent health bar — OpponentBanner.cs
 - [ ] Boss health bar with Lary portrait (sun level)

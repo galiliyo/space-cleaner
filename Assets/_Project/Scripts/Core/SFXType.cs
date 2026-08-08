@@ -16,6 +16,7 @@ namespace SpaceCleaner.Core
         UIClick,
         BuffCollected,
         BuffExpiring,
-        BuffExpired
+        BuffExpired,
+        ComboUp
     }
 }

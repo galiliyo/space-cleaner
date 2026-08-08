@@ -5,6 +5,7 @@ namespace SpaceCleaner.Core
 {
     public class TrashSpawner : MonoBehaviour
     {
+        public static TrashSpawner Instance { get; private set; }
         [Header("Planet")]
         [SerializeField] private Transform planet;
         [SerializeField] private float planetRadius = 50f;

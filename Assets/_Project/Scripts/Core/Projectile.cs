@@ -173,10 +173,72 @@ namespace SpaceCleaner.Core
                 SpawnTrashIfPlayerProjectile();
             }
 
+            SpawnImpactVFX(transform.position);
             SFXManager.Instance?.PlayAtPosition(SFXType.ProjectileImpact, transform.position);
             ObjectPool.ReturnOrDestroy(gameObject);
         }
 
+        private void SpawnImpactVFX(Vector3 position)
+        {
+            // Create impact burst
+            var go = new GameObject("ImpactBurst");
+            go.transform.position = position;
+            
+            var ps = go.AddComponent<ParticleSystem>();
+            
+            var main = ps.main;
+            main.duration = 0.3f;
+            main.startLifetime = 0.2f;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(3f, 6f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.15f, 0.3f);
+            main.startColor = new Color(1f, 0.7f, 0.2f, 1f);
+            main.maxParticles = 15;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.playOnAwake = false;
+            
+            var emission = ps.emission;
+            emission.SetBurst(0, new ParticleSystem.Burst(0f, 10));
+            
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.1f;
+            
+            var colorOverLife = ps.colorOverLifetime;
+            colorOverLife.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { 
+                    new GradientColorKey(new Color(1f, 0.8f, 0.2f), 0f), 
+                    new GradientColorKey(new Color(1f, 0.4f, 0.1f), 1f) 
+                },
+                new[] { 
+                    new GradientAlphaKey(1f, 0f), 
+                    new GradientAlphaKey(0f, 1f) 
+                }
+            );
+            colorOverLife.color = gradient;
+            
+            var sizeOverLife = ps.sizeOverLifetime;
+            sizeOverLife.enabled = true;
+            sizeOverLife.size = new ParticleSystem.MinMaxCurve(1f, 0.1f);
+            
+            // Renderer
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit") 
+                ?? Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader != null)
+            {
+                var mat = new Material(shader);
+                mat.SetFloat("_Surface", 1f);
+                mat.SetFloat("_Blend", 1f);
+                renderer.material = mat;
+            }
+            
+            ps.Play();
+            Destroy(go, 0.5f);
+        }
+        
         private void SpawnTrashIfPlayerProjectile()
         {
             // Only player projectiles (layer 6) convert to trash

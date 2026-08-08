@@ -61,7 +61,8 @@ namespace SpaceCleaner.Core
             entries = new Dictionary<SFXType, SFXEntry>();
             lastPlayTime = new Dictionary<SFXType, float>();
 
-            Register(SFXType.PlayerShoot, 0.45f, 0.05f, "laser5");
+            Register(SFXType.PlayerShoot, 0.55f, 0.05f, 
+                "laser5", "laser4", "laser3");
             Register(SFXType.ProjectileImpact, 0.55f, 0.1f,
                 "impactPlate_light_000", "impactPlate_light_001", "impactPlate_light_002",
                 "impactPlate_light_003", "impactPlate_light_004",
@@ -90,6 +91,7 @@ namespace SpaceCleaner.Core
             RegisterClip(SFXType.BuffCollected, 0.55f, 0f, GenerateBuffCollectedClip());
             RegisterClip(SFXType.BuffExpiring, 0.40f, 0.5f, GenerateBuffExpiringClip());
             RegisterClip(SFXType.BuffExpired,  0.45f, 0f, GenerateBuffExpiredClip());
+            RegisterClip(SFXType.ComboUp,      0.50f, 0f, GenerateComboUpClip());
         }
 
         private void RegisterClip(SFXType type, float volume, float cooldown, AudioClip clip)
@@ -166,6 +168,27 @@ namespace SpaceCleaner.Core
             return ClipFromSamples("BuffExpired", s, rate);
         }
 
+        private static AudioClip GenerateComboUpClip()
+        {
+            // Quick rising two-note chirp, ~0.15s. Snappier than buff pickup — combo tiers hit often.
+            const int rate = 22050;
+            float duration = 0.15f;
+            int n = Mathf.RoundToInt(rate * duration);
+            float[] s = new float[n];
+            float[] notes = { 1320f, 1760f }; // E6 -> A6
+            for (int i = 0; i < n; i++)
+            {
+                float t = (float)i / rate;
+                int seg = Mathf.Clamp((int)(t / (duration / notes.Length)), 0, notes.Length - 1);
+                float local = (t - seg * (duration / notes.Length)) / (duration / notes.Length);
+                float env = Mathf.Sin(local * Mathf.PI);
+                float wave = Mathf.Sin(2f * Mathf.PI * notes[seg] * t)
+                           + 0.5f * Mathf.Sin(2f * Mathf.PI * notes[seg] * 2f * t);
+                s[i] = wave * env * 0.5f;
+            }
+            return ClipFromSamples("ComboUp", s, rate);
+        }
+
         private static AudioClip ClipFromSamples(string name, float[] samples, int sampleRate)
         {
             var clip = AudioClip.Create(name, samples.Length, 1, sampleRate, false);
@@ -191,8 +214,8 @@ namespace SpaceCleaner.Core
             {
                 clips = clips.ToArray(),
                 volume = volume,
-                pitchMin = 0.95f,
-                pitchMax = 1.05f,
+                pitchMin = 0.92f,
+                pitchMax = 1.08f,
                 cooldown = cooldown
             };
             lastPlayTime[type] = -999f;

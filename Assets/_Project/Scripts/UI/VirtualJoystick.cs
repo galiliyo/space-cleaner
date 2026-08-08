@@ -151,6 +151,7 @@ namespace SpaceCleaner.UI
         public void OnPointerDown(PointerEventData eventData)
         {
             OnDrag(eventData);
+            TriggerPressAnimation();
         }
 
         public void OnDrag(PointerEventData eventData)
@@ -178,6 +179,7 @@ namespace SpaceCleaner.UI
 
             Direction = Vector2.zero;
             SendValueToControl(Vector2.zero);
+            TriggerReleaseAnimation();
         }
 
         // --- Sprite generators (cached, shared) ---
@@ -311,6 +313,60 @@ namespace SpaceCleaner.UI
             return s_GradientCircleSprite;
         }
 
+        private void TriggerPressAnimation()
+        {
+            if (handleRect != null)
+            {
+                StopCoroutine("AnimatePress");
+                StartCoroutine(AnimatePress());
+            }
+        }
+        
+        private void TriggerReleaseAnimation()
+        {
+            if (backgroundRect != null)
+            {
+                StopCoroutine("AnimateRelease");
+                StartCoroutine(AnimateRelease());
+            }
+        }
+        
+        private System.Collections.IEnumerator AnimatePress()
+        {
+            float duration = 0.1f;
+            float elapsed = 0f;
+            Vector2 baseSize = new Vector2(handleRadius * 2f, handleRadius * 2f);
+            Vector2 targetSize = baseSize * 1.2f;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                handleRect.sizeDelta = Vector2.Lerp(baseSize, targetSize, t);
+                yield return null;
+            }
+        }
+        
+        private System.Collections.IEnumerator AnimateRelease()
+        {
+            float duration = 0.15f;
+            float elapsed = 0f;
+            Vector2 currentSize = handleRect.sizeDelta;
+            Vector2 baseSize = new Vector2(handleRadius * 2f, handleRadius * 2f);
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                // Elastic bounce back
+                float bounce = Mathf.Sin(t * Mathf.PI * 3f) * (1f - t) * 0.15f;
+                handleRect.sizeDelta = Vector2.Lerp(currentSize, baseSize, t) + Vector2.one * bounce * baseSize.x;
+                yield return null;
+            }
+            
+            handleRect.sizeDelta = baseSize;
+        }
+        
         public static VirtualJoystick Create(RectTransform parent, string controlPath, Vector2 anchorPosition)
         {
             var go = new GameObject("MoveJoystick", typeof(RectTransform));

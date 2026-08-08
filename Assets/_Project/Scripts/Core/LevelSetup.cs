@@ -73,6 +73,14 @@ namespace SpaceCleaner.Core
                 // Add death handler if not present
                 if (player.GetComponent<PlayerDeathHandler>() == null)
                     player.gameObject.AddComponent<PlayerDeathHandler>();
+                
+                // Add polish components if not present
+                if (player.GetComponent<ShipFeedback>() == null)
+                    player.gameObject.AddComponent<ShipFeedback>();
+                if (player.GetComponent<VacuumJuice>() == null)
+                    player.gameObject.AddComponent<VacuumJuice>();
+                if (player.GetComponent<ShootingJuice>() == null)
+                    player.gameObject.AddComponent<ShootingJuice>();
             }
 
             // Setup camera
@@ -101,9 +109,35 @@ namespace SpaceCleaner.Core
 
             // Setup moon
             SetupMoon();
+            
+            // Setup planet atmosphere glow (Fresnel shader)
+            if (planet != null && planet.GetComponent<PlanetAtmosphere>() == null)
+                planet.gameObject.AddComponent<PlanetAtmosphere>();
 
             // Setup radar minimap
             SetupRadar();
+            
+            // Setup trash spawner
+            SetupTrashSpawner();
+            
+            // Setup combo system (manager + on-screen UI)
+            SetupCombo();
+            
+            // HUD animations are now auto-added by PolishSetup component
+        }
+        
+        private void SetupCombo()
+        {
+            if (ComboManager.Instance == null)
+            {
+                var comboGO = new GameObject("ComboManager");
+                comboGO.transform.SetParent(transform);
+                comboGO.AddComponent<ComboManager>();
+            }
+
+            var hud = FindAnyObjectByType<GameplayHUD>();
+            if (hud != null && hud.GetComponent<ComboUI>() == null)
+                hud.gameObject.AddComponent<ComboUI>();
         }
 
         private void SetupMoon()
@@ -161,6 +195,41 @@ namespace SpaceCleaner.Core
             // Use reflection-free approach: set via serialized fields using a helper
             // Since we're creating at runtime, we set public-accessible references
             radar.SetReferences(planet, player.transform, radarRt, bgImage);
+        }
+        
+        private void SetupTrashSpawner()
+        {
+            // Check if TrashSpawner already exists
+            var existingSpawner = FindAnyObjectByType<TrashSpawner>();
+            if (existingSpawner != null) return;
+            
+            // Create TrashSpawner GameObject
+            var spawnerGO = new GameObject("TrashSpawner");
+            spawnerGO.transform.SetParent(transform);
+            
+            var spawner = spawnerGO.AddComponent<TrashSpawner>();
+            
+            // Set references via reflection or public methods
+            // First try to find trash prefabs
+            var trashPrefabs = new System.Collections.Generic.List<GameObject>();
+            
+            // Look in common locations
+            string[] possiblePaths = new[] { "Trash_A", "Trash_B", "Trash_C" };
+            foreach (var path in possiblePaths)
+            {
+                var prefab = Resources.Load<GameObject>($"Prefabs/Trash/{path}");
+                if (prefab == null)
+                {
+                    // Try direct find
+                    prefab = GameObject.Find($"{path}");
+                }
+                if (prefab != null)
+                    trashPrefabs.Add(prefab);
+            }
+            
+            // If no prefabs found, we'll need them assigned in Inspector
+            // Store them in a temporary list for now
+            Debug.Log($"[LevelSetup] TrashSpawner created. Found {trashPrefabs.Count} trash prefabs. Assign trash prefabs in Inspector if needed.");
         }
     }
 }
