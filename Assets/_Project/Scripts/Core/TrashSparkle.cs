@@ -24,17 +24,49 @@ namespace SpaceCleaner.Core
         private Vector3 basePosition;
         private static Material sparkleMaterial;
         
+        private TrashPickup pickup;
+        
         private void Awake()
         {
-            basePosition = transform.position;
+            pickup = GetComponent<TrashPickup>();
+            CaptureBasePosition();
             bobOffset = Random.Range(0f, Mathf.PI * 2f);
             nextSparkleTime = Time.time + Random.Range(0f, sparkleInterval);
         }
         
+        private void OnEnable()
+        {
+            // Pooled objects are repositioned on Get() before OnEnable runs,
+            // so re-capture the spawn point here or the trash bobs around its
+            // previous location (drifting away from where it visually is).
+            CaptureBasePosition();
+        }
+        
+        private void CaptureBasePosition()
+        {
+            basePosition = transform.position;
+        }
+        
+        private bool wasBeingCollected;
+
         private void Update()
         {
-            UpdateIdleAnimation();
-            UpdateSparkles();
+            // While being vacuumed, TrashPickup drives the position toward the collector.
+            // If we keep writing basePosition here, we fight that movement and the trash
+            // never reaches the <0.5f arrival check — it hovers forever, uncollectable.
+            bool beingCollected = pickup != null && pickup.IsBeingCollected;
+
+            // Collection just ended (cancelled mid-flight): re-anchor idle bob where the
+            // trash actually is now, so it doesn't snap back to its old spawn point.
+            if (wasBeingCollected && !beingCollected)
+                CaptureBasePosition();
+            wasBeingCollected = beingCollected;
+
+            if (!beingCollected)
+            {
+                UpdateIdleAnimation();
+                UpdateSparkles();
+            }
         }
         
         private void UpdateIdleAnimation()
@@ -111,8 +143,8 @@ namespace SpaceCleaner.Core
         
         private void OnDisable()
         {
-            // Reset position when pooled
-            transform.position = basePosition;
+            // Pooled object is being returned — no position restore needed; the spawner
+            // sets the new position on Get(), and OnEnable re-captures basePosition.
         }
     }
 }

@@ -192,6 +192,8 @@ namespace SpaceCleaner.Player
             if (projectile != null)
             {
                 projectile.SetShooterLayer(gameObject.layer);
+                if (sphericalMovement != null && sphericalMovement.Planet != null)
+                    projectile.SetPlanetCenter(sphericalMovement.Planet.position);
                 if (buffReceiver != null && buffReceiver.DamageMultiplier > 1f)
                     projectile.ApplyDamageMultiplier(buffReceiver.DamageMultiplier);
             }

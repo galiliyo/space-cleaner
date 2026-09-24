@@ -29,7 +29,9 @@ Unity Editor is connected via MCP Unity on `localhost:8090` (auto-starts). Use `
 | Run specific test | `mcp__mcp-unity__run_tests(testFilter="Namespace.Class.Method")` |
 
 **MCP quirks:**
-- Listens on IPv6 (`::1:8090`), not IPv4 — curl needs `http://[::1]:8090`
+- Listens on `0.0.0.0:8090` (IPv4) — `curl http://127.0.0.1:8090` returns 501 when up, connection refused when down
+- Server stops on every Play Mode change; restart via Tools → MCP Unity → Server Window if port 8090 is closed
+- `load_scene` hangs if the current scene is dirty — Unity shows a Save dialog that needs a manual click
 - Times out during package imports / domain reloads — retry after Unity finishes
 </important>
 

@@ -17,6 +17,26 @@ namespace SpaceCleaner.Core
         private int shooterLayer = -1;
         private int defaultDamage;
 
+        // Spherical flight: shots follow the planet's curvature instead of flying
+        // off on a tangent. Armed per launch by the shooter; unarmed shots fly straight.
+        private Vector3 planetCenter;
+        private bool curveAroundPlanet;
+        private float flightRadius;
+        private Rigidbody body;
+
+        /// <summary>
+        /// Makes this shot ride a great circle around <paramref name="center"/> instead of
+        /// travelling in a straight line. On a planet of radius R a tangent shot climbs
+        /// d^2/(2R) above the surface after d units of travel, so unaided shots sail over
+        /// targets that are only a handful of units away.
+        /// </summary>
+        public void SetPlanetCenter(Vector3 center)
+        {
+            planetCenter = center;
+            flightRadius = Vector3.Distance(transform.position, center);
+            curveAroundPlanet = flightRadius > 0.001f;
+        }
+
         /// <summary>
         /// Called after spawning to prevent the projectile from hitting the entity that fired it.
         /// </summary>
@@ -73,6 +93,7 @@ namespace SpaceCleaner.Core
             // Cache the prefab-authored damage before any buff can override it.
             // Awake always runs before the first OnEnable, including on pooled instances.
             defaultDamage = damage;
+            body = GetComponent<Rigidbody>();
 
             EnsureSharedMaterials();
 
@@ -123,6 +144,7 @@ namespace SpaceCleaner.Core
             timer = lifetime;
             shooterLayer = -1;
             damage = defaultDamage; // clear any buff override from this instance's previous life
+            curveAroundPlanet = false; // shooter re-arms this every launch
 
             // Reset velocity so stale motion from a previous life doesn't carry over
             var rb = GetComponent<Rigidbody>();
@@ -146,6 +168,40 @@ namespace SpaceCleaner.Core
                 SpawnTrashIfPlayerProjectile();
                 ObjectPool.ReturnOrDestroy(gameObject);
             }
+        }
+
+        private void FixedUpdate()
+        {
+            if (!curveAroundPlanet || body == null) return;
+
+            ApplySphericalCurvature();
+        }
+
+        /// <summary>
+        /// Bends the shot's path so it stays at a constant distance from the planet centre,
+        /// i.e. it travels along a great circle instead of a straight tangent line.
+        ///
+        /// The rigidbody is non-kinematic, so the engine already integrates the straight
+        /// chord for this step; sweeping the position ourselves as well would advance the
+        /// shot twice. Instead we correct at the top of each step: seat the shot back on
+        /// its launch shell and re-aim the velocity along the tangent. Over a step the
+        /// only error is the chord-vs-arc sagitta (~2.5e-4 units at speed 8 on r=52), and
+        /// because it is cancelled every step it never accumulates into a climb.
+        /// </summary>
+        private void ApplySphericalCurvature()
+        {
+            Vector3 offset = body.position - planetCenter;
+            Vector3 velocity = body.linearVelocity;
+            float speed = velocity.magnitude;
+            if (offset.sqrMagnitude < 0.000001f || speed < 0.001f) return;
+
+            Vector3 up = offset.normalized;
+            Vector3 axis = Vector3.Cross(up, velocity);
+            // Fired straight at or away from the planet — there is no great circle to ride.
+            if (axis.sqrMagnitude < 0.000001f) return;
+
+            body.position = planetCenter + up * flightRadius;
+            body.linearVelocity = Vector3.Cross(axis.normalized, up) * speed;
         }
 
         private void OnTriggerEnter(Collider other)

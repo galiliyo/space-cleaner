@@ -1,14 +1,12 @@
 {
-    "name": "SpaceCleaner.Tests.EditMode",
+    "name": "SpaceCleaner.Tests.PlayMode",
     "rootNamespace": "SpaceCleaner.Tests",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "SpaceCleaner"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,

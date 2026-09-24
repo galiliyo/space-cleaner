@@ -279,12 +279,15 @@ namespace SpaceCleaner.Enemies
             shootTimer = shootCooldown;
             SFXManager.Instance?.Play(SFXType.AIShoot);
 
-            Vector3 dir = (playerTransform.position - firePoint.position).normalized;
-            dir = Quaternion.Euler(
-                Random.Range(-shootInaccuracy, shootInaccuracy),
-                Random.Range(-shootInaccuracy, shootInaccuracy),
-                0f) * dir;
-            dir.Normalize();
+            // Aim along the surface, not through it: shots now ride a great circle, so the
+            // launch direction must be tangent to the orbit shell or the shot dives/climbs.
+            Vector3 toPlayer = playerTransform.position - firePoint.position;
+            Vector3 up = planet != null
+                ? (firePoint.position - planet.position).normalized
+                : Vector3.up;
+            Vector3 dir = Vector3.ProjectOnPlane(toPlayer, up).normalized;
+            if (dir.sqrMagnitude < 0.001f) dir = transform.forward;
+            dir = Quaternion.AngleAxis(Random.Range(-shootInaccuracy, shootInaccuracy), up) * dir;
             Quaternion rot = Quaternion.LookRotation(dir);
             var pool = ObjectPool.GetPoolForPrefab(projectilePrefab);
             GameObject proj = pool != null
@@ -295,6 +298,8 @@ namespace SpaceCleaner.Enemies
             if (projectile != null)
             {
                 projectile.SetShooterLayer(gameObject.layer);
+                if (planet != null)
+                    projectile.SetPlanetCenter(planet.position);
                 if (buffReceiver != null && buffReceiver.DamageMultiplier > 1f)
                     projectile.ApplyDamageMultiplier(buffReceiver.DamageMultiplier);
             }
