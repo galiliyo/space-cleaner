@@ -4,6 +4,17 @@ Welcome! This document explains **what the game is and how it plays**. Read it b
 
 > **Source-of-truth note:** `docs/GDD.md` (v1.0, March 2026) is the original vision, but the game has evolved. Where this doc and the GDD disagree, this doc reflects the current code. Differences are called out in [GDD vs. reality](#8-gdd-vs-reality).
 
+## Quick Start (run the game from a fresh clone)
+
+1. **Install prerequisites:** [Git](https://git-scm.com), [Git LFS](https://git-lfs.com), and **Unity Hub** with **Unity 6000.3.10f1** (add the *Android Build Support* module only if you want to build for a phone).
+2. **Clone with LFS** (models, textures and audio are stored in Git LFS):
+   ```bash
+   git lfs install
+   git clone https://github.com/galiliyo/space-cleaner.git
+   ```
+   If the models/textures show up as tiny text files, run `git lfs pull` inside the repo.
+3. **Open the project** folder in Unity Hub. The first import takes several minutes and downloads packages (needs internet and Git on your PATH — the `mcp-unity` dev package is fetched from GitHub).
+4. **Open** `Assets/_Project/Scenes/Gameplay/Gameplay.unity` and press **Play**.
 ---
 
 ## 1. The One-Minute Pitch
