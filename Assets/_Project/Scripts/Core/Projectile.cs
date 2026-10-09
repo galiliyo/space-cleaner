@@ -241,7 +241,8 @@ namespace SpaceCleaner.Core
             go.transform.position = position;
             
             var ps = go.AddComponent<ParticleSystem>();
-            
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
             var main = ps.main;
             main.duration = 0.3f;
             main.startLifetime = 0.2f;

@@ -93,7 +93,8 @@ namespace SpaceCleaner.Core
             go.transform.position = transform.position + Random.insideUnitSphere * 0.3f;
             
             var ps = go.AddComponent<ParticleSystem>();
-            
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
             var main = ps.main;
             main.duration = sparkleDuration;
             main.startLifetime = sparkleDuration;
@@ -105,7 +106,7 @@ namespace SpaceCleaner.Core
             main.playOnAwake = false;
             
             var emission = ps.emission;
-            emission.SetBurst(0, new ParticleSystem.Burst(0f, 1));
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) });
             
             var shape = ps.shape;
             shape.enabled = false;

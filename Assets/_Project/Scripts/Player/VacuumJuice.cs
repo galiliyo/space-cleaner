@@ -97,7 +97,8 @@ namespace SpaceCleaner.Player
             go.transform.position = position;
             
             var ps = go.AddComponent<ParticleSystem>();
-            
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
             var main = ps.main;
             main.duration = 0.5f;
             main.startLifetime = 0.4f;
