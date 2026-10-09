@@ -46,11 +46,30 @@
       "mcp__plugin_serena_serena__get_current_config",
       "mcp__plugin_serena_serena__find_file",
       "mcp__plugin_serena_serena__find_symbol",
-      "Skill(update-config)"
+      "mcp__serena__get_diagnostics_for_file",
+      "Skill(update-config)",
+      "Skill(claude-api)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "mcp-unity"
-  ]
+  ],
+  "env": {
+    "ENABLE_TOOL_SEARCH": "true"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/yonga/.local/bin/headroom.EXE wrap selfheal --marker headroom-wrap-selfheal",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
 }
