@@ -189,7 +189,8 @@ namespace SpaceCleaner.Player
         
         private void CalculateVelocity()
         {
-            if (lastPosition != Vector3.zero)
+            // dt can be 0 on paused/throttled frames; 0/0 would poison velocity and the bank angle with NaN.
+            if (lastPosition != Vector3.zero && Time.deltaTime > 0f)
             {
                 velocity = (transform.position - lastPosition) / Time.deltaTime;
             }

@@ -1180,9 +1180,17 @@ MonoBehaviour:
   planetRadius: 50
   spawnHeight: 1
   trashPrefabs:
-  - {fileID: 6785288243625424948, guid: c5e152b30ee02be4f89754a79826a5a2, type: 3}
-  - {fileID: 5955177309631672657, guid: da11e0e909c56d444b88ca1200baaf81, type: 3}
-  - {fileID: 5239876450201546809, guid: 948053c4ac874ff4cbe70b62be340791, type: 3}
+  - {fileID: 6785288243625424948, guid: 1c32b4bd94a3dfe449fc31c1033618ab, type: 3}
+  - {fileID: 6785288243625424948, guid: 8f2b4bd4ee4452f47987b750523ccd64, type: 3}
+  - {fileID: 6785288243625424948, guid: 0a79545702616f24185b85477bd7512f, type: 3}
+  - {fileID: 6785288243625424948, guid: 77ff9ac7e0f45a84aa774ad75f141e62, type: 3}
+  - {fileID: 6785288243625424948, guid: 47eb1355b67d4a44fb7f22b3f6c58f2e, type: 3}
+  - {fileID: 6785288243625424948, guid: 10b3d35d43262c34d9952c2614c81fa8, type: 3}
+  - {fileID: 6785288243625424948, guid: 68dd0244c4332914e9169bf9ff89e200, type: 3}
+  - {fileID: 6785288243625424948, guid: 948304155c2160347944078076847240, type: 3}
+  - {fileID: 6785288243625424948, guid: 4d0122be1734e1a40be41e568f66d085, type: 3}
+  - {fileID: 6785288243625424948, guid: 0d0d6e9b5480a2e4fb06addb217cd561, type: 3}
+  - {fileID: 6785288243625424948, guid: 56bdd2bfe3b55974082ea53c72ab59ec, type: 3}
   spawnCount: 200
   trashParent: {fileID: 0}
   clusterCount: 20
@@ -1837,7 +1845,7 @@ MonoBehaviour:
   totalTrashCount: 0
   collectedTrashCount: 0
   opponentAlive: 1
-  cleanupThreshold: 0.8
+  cleanupThreshold: 1
 --- !u!4 &2036008655
 Transform:
   m_ObjectHideFlags: 0
@@ -1970,6 +1978,10 @@ MonoBehaviour:
   minDistance: 5
   maxDistance: 60
   smoothTime: 0.1
+  lookaheadDistance: 5
+  lookaheadSmoothTime: 0.3
+  useAimForLookahead: 1
+  framingOffset: 0.5
 --- !u!114 &2124516191
 MonoBehaviour:
   m_ObjectHideFlags: 0

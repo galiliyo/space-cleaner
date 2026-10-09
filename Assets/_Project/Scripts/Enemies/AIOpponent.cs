@@ -393,14 +393,14 @@ namespace SpaceCleaner.Enemies
 
         private IEnumerator DeathSequence()
         {
-            var meshRenderer = GetComponent<MeshRenderer>();
-            if (meshRenderer != null)
+            var renderers = GetComponentsInChildren<Renderer>();
+            if (renderers.Length > 0)
             {
                 for (int i = 0; i < 5; i++)
                 {
-                    meshRenderer.enabled = false;
+                    foreach (var r in renderers) r.enabled = false;
                     yield return s_BlinkWait;
-                    meshRenderer.enabled = true;
+                    foreach (var r in renderers) r.enabled = true;
                     yield return s_BlinkWait;
                 }
             }
