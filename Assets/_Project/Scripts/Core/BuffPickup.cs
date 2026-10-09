@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using TMPro;
 
 namespace SpaceCleaner.Core
 {
@@ -22,6 +23,8 @@ namespace SpaceCleaner.Core
         private const int   RingSegments  = 48;
         private const float RotateSpeed   = 25f;   // deg/s around surface normal
         private const float IconSize      = 2.0f;  // world units across
+        private const float LabelFontSize = 4f;    // small print, world-space TMP
+        private const float LabelOffset   = 0.8f;  // gap below the ring edge
 
         // ── Gameplay config ────────────────────────────────────────────────
         private const float ActiveDuration = 30f;
@@ -39,6 +42,8 @@ namespace SpaceCleaner.Core
         private Vector3   _surfaceNormal;
         private float     _timer;
         private Transform _iconTransform; // child quad — billboarded each frame
+        private TextMeshPro _label;       // "Name 24s" under the ring
+        private int       _shownSeconds = -1;
 
         public void Initialize(BuffType type, Vector3 position, Vector3 surfaceNormal)
         {
@@ -56,6 +61,51 @@ namespace SpaceCleaner.Core
 
             BuildRing(s_Colors[(int)type]);
             BuildIcon(type, s_Colors[(int)type]);
+            BuildLabel(s_Colors[(int)type]);
+        }
+
+        private static string DisplayName(BuffType type)
+        {
+            switch (type)
+            {
+                case BuffType.Speed:        return "Speed";
+                case BuffType.VacuumRadius: return "Vacuum Radius";
+                case BuffType.AmmoStrength: return "Ammo Strength";
+                default:                    return type.ToString();
+            }
+        }
+
+        private void BuildLabel(Color color)
+        {
+            var go = new GameObject("Label");
+            go.transform.SetParent(transform, false);
+            _label = go.AddComponent<TextMeshPro>();
+            _label.fontSize         = LabelFontSize;
+            _label.alignment        = TextAlignmentOptions.Center;
+            _label.color            = Color.Lerp(color, Color.white, 0.4f);
+            _label.enableWordWrapping = false;
+            _label.raycastTarget    = false;
+            UpdateLabel(force: true);
+        }
+
+        private void UpdateLabel(bool force = false)
+        {
+            if (_label == null) return;
+            int secs = Mathf.CeilToInt(Mathf.Max(0f, _timer));
+            if (!force && secs == _shownSeconds) return;
+            _shownSeconds = secs;
+            _label.text = $"{DisplayName(_type)}  {secs}s";
+        }
+
+        private void LateUpdate()
+        {
+            if (_label == null) return;
+            // Hang below the ring edge along the surface normal; face the camera.
+            // Set in world space so the ring's spin doesn't carry the text around.
+            var t = _label.transform;
+            t.position = transform.position - _surfaceNormal * (RingRadius + LabelOffset);
+            var cam = UnityEngine.Camera.main;
+            if (cam != null) t.rotation = cam.transform.rotation;
         }
 
         private void BuildIcon(BuffType type, Color color)
@@ -148,6 +198,7 @@ namespace SpaceCleaner.Core
 
             // Auto-despawn when timer expires
             _timer -= Time.deltaTime;
+            UpdateLabel();
             if (_timer <= 0f)
             {
                 Despawn(collected: false);
